@@ -1,9 +1,23 @@
-version: 2
+version: 2.1
+
+executors:
+  golang:
+    parameters:
+      version:
+        type: enum
+        enum: ['1.12-rc', '1.11.5']
+    docker:
+      - image: circleci/golang:<< parameters.version >>
 
 jobs:
-  test-1.12-rc: &test
-    docker:
-      - image: circleci/golang:1.12-rc
+  test:
+    parameters:
+      exec:
+        type: executor
+      cover:
+        default: false
+        type: boolean
+    executor: << parameters.exec >>
     steps:
       - checkout
       - restore_cache:
@@ -14,16 +28,28 @@ jobs:
           key: go-mod-v1-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod/cache"
-      - run: go test -race -v ./...
-
-  test-1.11:
-    <<: *test
-    docker:
-      - image: circleci/golang:1.11.5
+      - when:
+          condition: << parameters.cover >>
+          steps:
+            - run: go test -coverpkg ./... -coverprofile coverage.txt -covermode atomic -race -v ./...
+            - run: bash <(curl -s https://codecov.io/bash)
+      - unless:
+          condition: << parameters.cover >>
+          steps:
+            - run: go test -race -v ./...
 
 workflows:
   version: 2
   test:
     jobs:
-      - test-1.12-rc
-      - test-1.11
+      - test:
+          name: 1.12-rc
+          cover: true
+          exec:
+            name: golang
+            version: 1.12-rc
+      - test:
+          name: 1.11.5
+          exec:
+            name: golang
+            version: 1.11.5
