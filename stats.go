@@ -13,12 +13,12 @@ type StatsHandler interface {
 
 // Tag is tag information.
 type Tag interface {
-	isTag() bool
+	isTag()
 }
 
 // Stats is stats information about receive/consume.
 type Stats interface {
-	isStats() bool
+	isStats()
 }
 
 // NopStatsHandler is no-op StatsHandler
@@ -35,7 +35,7 @@ func (*NopStatsHandler) HandleProcess(context.Context, Stats) {}
 // BeginTag is  tag for an receive/consume process starts.
 type BeginTag struct{}
 
-func (*BeginTag) isTag() bool { return true }
+func (*BeginTag) isTag() {}
 
 // End contains stats when an receive/consume process ends.
 type End struct {
@@ -44,26 +44,12 @@ type End struct {
 	EndTime   time.Time
 }
 
-func (*End) isStats() bool { return true }
-
-// ReceiveBeginTag is tag for receive begin.
-type ReceiveBeginTag struct{}
-
-func (*ReceiveBeginTag) isTag() bool { return true }
-
-// ReceiveEnd contains stats when an process receive ends.
-type ReceiveEnd struct {
-	BeginTime time.Time
-	EndTime   time.Time
-	Error     error
-}
-
-func (pb *ReceiveEnd) isStats() bool { return true }
+func (*End) isStats() {}
 
 // ConsumeBeginTag is tag for consumption start.
 type ConsumeBeginTag struct{}
 
-func (*ConsumeBeginTag) isTag() bool { return true }
+func (*ConsumeBeginTag) isTag() {}
 
 // ConsumeEnd contains stats when consume end.
 type ConsumeEnd struct {
@@ -72,12 +58,12 @@ type ConsumeEnd struct {
 	Error     error
 }
 
-func (pb *ConsumeEnd) isStats() bool { return true }
+func (pb *ConsumeEnd) isStats() {}
 
 // EnqueueTag is tag for enqueue in channel.
 type EnqueueTag struct{}
 
-func (*EnqueueTag) isTag() bool { return true }
+func (*EnqueueTag) isTag() {}
 
 // Dequeue contains stats when dequeue in channel.
 type Dequeue struct {
@@ -85,4 +71,4 @@ type Dequeue struct {
 	EndTime   time.Time
 }
 
-func (*Dequeue) isStats() bool { return true }
+func (*Dequeue) isStats() {}

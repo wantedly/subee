@@ -2,15 +2,15 @@ package subee
 
 import "time"
 
-// Option configures Engine.
-type Option func(*Engine)
+// Option configures Config.
+type Option func(*Config)
 
 // WithMultiMessagesConsumerInterceptors returns an Option that sets the MultiMessageConsumerInterceptor implementations(s).
 // Interceptors are called in order of addition.
 // e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessageConsumer.Consume
 func WithMultiMessagesConsumerInterceptors(interceptors ...MultiMessagesConsumerInterceptor) Option {
-	return func(e *Engine) {
-		e.mmConsumer = chainMultiMessagesConsumerInterceptors(e.mmConsumer, interceptors...)
+	return func(c *Config) {
+		c.MultiMessagesConsumer = chainMultiMessagesConsumerInterceptors(c.MultiMessagesConsumer, interceptors...)
 	}
 }
 
@@ -27,41 +27,39 @@ func chainMultiMessagesConsumerInterceptors(consumer MultiMessagesConsumer, inte
 
 // WithLogger returns an Option that sets the Logger implementation.
 func WithLogger(logger Logger) Option {
-	return func(e *Engine) {
-		e.logger = logger
+	return func(c *Config) {
+		c.Logger = logger
 	}
 }
 
 // WithStatsHandler returns an Option that sets the StatsHandler implementation.
 func WithStatsHandler(sh StatsHandler) Option {
-	return func(e *Engine) {
-		e.sh = sh
+	return func(c *Config) {
+		c.StatsHandler = sh
 	}
 }
 
 // WithChunkSize returns an Option that sets the maximum chunked message size per consuming.
 func WithChunkSize(size int) Option {
-	return func(e *Engine) {
+	return func(c *Config) {
 		if size > 0 {
-			e.scfg.ChunkSize = size
-		}
-	}
-}
-
-// WithRetryCount returns an Option that sets the maximum retry count when failed to receive messages.
-func WithRetryCount(count int) Option {
-	return func(e *Engine) {
-		if count > 0 {
-			e.scfg.MaxRetryCount = count
+			c.ChunkSize = size
 		}
 	}
 }
 
 // WithFlushInterval returns an Option that sets the maximum flush time interval to receive message.
 func WithFlushInterval(inval time.Duration) Option {
-	return func(e *Engine) {
+	return func(c *Config) {
 		if inval > 0 {
-			e.scfg.FlushInterval = inval
+			c.FlushInterval = inval
 		}
+	}
+}
+
+// WithAckImmediately returns an Option that make ack messages before consuming.
+func WithAckImmediately() Option {
+	return func(c *Config) {
+		c.AckImmediately = true
 	}
 }
