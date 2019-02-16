@@ -1,0 +1,29 @@
+version: 2
+
+jobs:
+  test-1.12-rc: &test
+    docker:
+      - image: circleci/golang:1.12-rc
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
+      - run: go mod download
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod/cache"
+      - run: go test -race -v ./...
+
+  test-1.11:
+    <<: *test
+    docker:
+      - image: circleci/golang:1.11.5
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test-1.12-rc
+      - test-1.11
