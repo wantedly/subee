@@ -46,16 +46,22 @@ func (e *Engine) Start(ctx context.Context) error {
 		return e.watchShutdownSignal(sigDoneCh, cancel)
 	})
 
-	inCh, outCh := createBufferedQueue(
-		func() context.Context {
-			ctx := context.Background()
-			ctx = e.StatsHandler.TagProcess(ctx, &BeginTag{})
-			ctx = e.StatsHandler.TagProcess(ctx, &EnqueueTag{})
-			return ctx
-		},
-		e.ChunkSize,
-		e.FlushInterval,
+	var (
+		inCh  chan<- Message
+		outCh <-chan queuedMessage
 	)
+
+	if e.SingleMessageConsumer != nil {
+		inCh, outCh = createQueue(e.createStatsHandlerCtx)
+	}
+
+	if e.MultiMessagesConsumer != nil {
+		inCh, outCh = createBufferedQueue(
+			e.createStatsHandlerCtx,
+			e.ChunkSize,
+			e.FlushInterval,
+		)
+	}
 
 	eg.Go(func() error {
 		defer close(inCh)
@@ -71,6 +77,13 @@ func (e *Engine) Start(ctx context.Context) error {
 	err := eg.Wait()
 
 	return errors.WithStack(err)
+}
+
+func (e *Engine) createStatsHandlerCtx() context.Context {
+	ctx := context.Background()
+	ctx = e.StatsHandler.TagProcess(ctx, &BeginTag{})
+	ctx = e.StatsHandler.TagProcess(ctx, &EnqueueTag{})
+	return ctx
 }
 
 func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.CancelFunc) error {
