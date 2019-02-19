@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type queuedMessage interface {
+	Count() int
+	Context() context.Context
+	GetEnqueuedAt() time.Time
+}
+
 type multiMessages struct {
 	Ctx        context.Context
 	Msgs       []Message
@@ -22,6 +28,28 @@ func (m *multiMessages) Nack() {
 		msg.Nack()
 	}
 }
+
+func (m *multiMessages) Count() int { return len(m.Msgs) }
+
+func (m *multiMessages) Context() context.Context { return m.Ctx }
+
+func (m *multiMessages) GetEnqueuedAt() time.Time { return m.EnqueuedAt }
+
+type singleMessage struct {
+	Ctx        context.Context
+	Msg        Message
+	EnqueuedAt time.Time
+}
+
+func (s *singleMessage) Ack() { s.Msg.Ack() }
+
+func (s *singleMessage) Nack() { s.Msg.Nack() }
+
+func (s *singleMessage) Context() context.Context { return s.Ctx }
+
+func (s *singleMessage) Count() int { return 1 }
+
+func (s *singleMessage) GetEnqueuedAt() time.Time { return s.EnqueuedAt }
 
 func createBufferedQueue(
 	createCtx func() context.Context,
