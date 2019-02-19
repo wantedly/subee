@@ -2,7 +2,6 @@ package subee
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,29 +13,19 @@ import (
 
 // Engine is the framework instance.
 type Engine struct {
-	msgCh      chan *BufferedMessage
+	*Config
 	subscriber Subscriber
-
-	logger Logger
-	sh     StatsHandler
-
-	mmConsumer MultiMessagesConsumer
-	scfg       *SubscribeConfig
 }
 
 // New creates a Engine intstance.
-func New(subscriber Subscriber, consumer MultiMessagesConsumer, options ...Option) *Engine {
-	e := &Engine{
-		subscriber: subscriber,
-		mmConsumer: consumer,
-		msgCh:      make(chan *BufferedMessage, 1),
-		logger:     log.New(os.Stdout, "", log.LstdFlags),
-		sh:         new(NopStatsHandler),
-		scfg:       newDefaultSubscribeConfig(),
-	}
+func New(subscriber Subscriber, consumer MultiMessagesConsumer, opts ...Option) *Engine {
+	cfg := newDefaultConfig()
+	cfg.MultiMessagesConsumer = consumer
+	cfg.apply(opts)
 
-	for _, option := range options {
-		option(e)
+	e := &Engine{
+		Config:     cfg,
+		subscriber: subscriber,
 	}
 
 	return e
@@ -44,11 +33,12 @@ func New(subscriber Subscriber, consumer MultiMessagesConsumer, options ...Optio
 
 // Start starts Subscriber and Consumer process.
 func (e *Engine) Start(ctx context.Context) error {
-	e.logger.Print("Start Pub/Sub worker")
-	defer e.logger.Print("Finish Pub/Sub worker")
+	e.Logger.Print("Start Pub/Sub worker")
+	defer e.Logger.Print("Finish Pub/Sub worker")
 
 	eg, ctx := errgroup.WithContext(ctx)
 	ctx, cancel := context.WithCancel(ctx)
+	ctx = setLogger(ctx, e.Logger)
 
 	sigDoneCh := make(chan struct{}, 1)
 
@@ -56,26 +46,31 @@ func (e *Engine) Start(ctx context.Context) error {
 		return e.watchShutdownSignal(sigDoneCh, cancel)
 	})
 
+	inCh, outCh := createBufferedQueue(
+		func() context.Context {
+			ctx := context.Background()
+			ctx = e.StatsHandler.TagProcess(ctx, &BeginTag{})
+			ctx = e.StatsHandler.TagProcess(ctx, &EnqueueTag{})
+			return ctx
+		},
+		e.ChunkSize,
+		e.FlushInterval,
+	)
+
 	eg.Go(func() error {
-		ctx = e.setSubscriberSettings(ctx)
-		return e.subscriber.Subscribe(ctx, e.msgCh)
+		defer close(inCh)
+		err := e.subscriber.Subscribe(ctx, func(msg Message) { inCh <- msg })
+		return errors.WithStack(err)
 	})
 
 	eg.Go(func() error {
 		defer close(sigDoneCh)
-		return e.consume(e.msgCh)
+		return e.consume(outCh)
 	})
 
 	err := eg.Wait()
 
 	return errors.WithStack(err)
-}
-
-// setSubscriberSettings sets common settings for Subscriber using context object.
-func (e *Engine) setSubscriberSettings(ctx context.Context) context.Context {
-	ctx = context.WithValue(ctx, loggerContextKey{}, e.logger)
-	ctx = context.WithValue(ctx, statsHandlerContextKey{}, e.sh)
-	return context.WithValue(ctx, subscribeConfigContextkey{}, e.scfg)
 }
 
 func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.CancelFunc) error {
@@ -91,41 +86,52 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 	for {
 		select {
 		case <-sigstopCh:
-			e.logger.Print("Finish os signal monitoring")
+			e.Logger.Print("Finish os signal monitoring")
 			return nil
 		case sig := <-sigCh:
-			e.logger.Printf("Received of signal: %v", sig)
+			e.Logger.Printf("Received of signal: %v", sig)
 			cancel()
 		}
 	}
 }
 
-func (e *Engine) consume(msgCh <-chan *BufferedMessage) error {
-	e.logger.Print("Start consume process")
-	defer e.logger.Print("Finish consume process")
+func (e *Engine) consume(msgCh <-chan *multiMessages) error {
+	e.Logger.Print("Start consume process")
+	defer e.Logger.Print("Finish consume process")
 
 	for m := range msgCh {
-		e.sh.HandleProcess(m.Ctx, &Dequeue{
-			BeginTime: getTimeByContextKey(m.Ctx, EnqueueTimeContextKey{}),
+		if e.AckImmediately {
+			m.Ack()
+		}
+
+		e.StatsHandler.HandleProcess(m.Ctx, &Dequeue{
+			BeginTime: m.EnqueuedAt,
 			EndTime:   time.Now(),
 		})
 
 		beginTime := time.Now()
 
-		m.Ctx = e.sh.TagProcess(m.Ctx, &ConsumeBeginTag{})
+		m.Ctx = e.StatsHandler.TagProcess(m.Ctx, &ConsumeBeginTag{})
 
 		// // discard the error, because error can be handled with interceptor.
-		err := e.mmConsumer.Consume(m.Ctx, m.Msgs)
+		err := e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs)
+		if !e.AckImmediately {
+			if err != nil {
+				m.Nack()
+			} else {
+				m.Ack()
+			}
+		}
 
-		e.sh.HandleProcess(m.Ctx, &ConsumeEnd{
+		e.StatsHandler.HandleProcess(m.Ctx, &ConsumeEnd{
 			BeginTime: beginTime,
 			EndTime:   time.Now(),
 			Error:     err,
 		})
 
-		e.sh.HandleProcess(m.Ctx, &End{
+		e.StatsHandler.HandleProcess(m.Ctx, &End{
 			MsgCount:  len(m.Msgs),
-			BeginTime: getTimeByContextKey(m.Ctx, BeginTimeContextKey{}),
+			BeginTime: m.EnqueuedAt,
 			EndTime:   time.Now(),
 		})
 	}
