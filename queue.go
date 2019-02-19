@@ -50,7 +50,8 @@ func (s *singleMessage) Ack() { s.Msg.Ack() }
 
 func (s *singleMessage) Nack() { s.Msg.Nack() }
 
-func (s *singleMessage) Context() context.Context       { return s.Ctx }
+func (s *singleMessage) Context() context.Context { return s.Ctx }
+
 func (s *singleMessage) SetContext(ctx context.Context) { s.Ctx = ctx }
 
 func (s *singleMessage) Count() int { return 1 }
