@@ -6,8 +6,11 @@ import (
 )
 
 type queuedMessage interface {
+	Ack()
+	Nack()
 	Count() int
 	Context() context.Context
+	SetContext(ctx context.Context)
 	GetEnqueuedAt() time.Time
 }
 
@@ -33,6 +36,8 @@ func (m *multiMessages) Count() int { return len(m.Msgs) }
 
 func (m *multiMessages) Context() context.Context { return m.Ctx }
 
+func (m *multiMessages) SetContext(ctx context.Context) { m.Ctx = ctx }
+
 func (m *multiMessages) GetEnqueuedAt() time.Time { return m.EnqueuedAt }
 
 type singleMessage struct {
@@ -45,7 +50,8 @@ func (s *singleMessage) Ack() { s.Msg.Ack() }
 
 func (s *singleMessage) Nack() { s.Msg.Nack() }
 
-func (s *singleMessage) Context() context.Context { return s.Ctx }
+func (s *singleMessage) Context() context.Context       { return s.Ctx }
+func (s *singleMessage) SetContext(ctx context.Context) { s.Ctx = ctx }
 
 func (s *singleMessage) Count() int { return 1 }
 
@@ -81,10 +87,10 @@ func createBufferedQueue(
 	flushInterval time.Duration,
 ) (
 	chan<- Message,
-	<-chan *multiMessages,
+	<-chan queuedMessage,
 ) {
 	inCh := make(chan Message, chunkSize)
-	outCh := make(chan *multiMessages)
+	outCh := make(chan queuedMessage)
 
 	go func() {
 		defer close(outCh)

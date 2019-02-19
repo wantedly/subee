@@ -65,7 +65,7 @@ func (e *Engine) Start(ctx context.Context) error {
 
 	eg.Go(func() error {
 		defer close(sigDoneCh)
-		return e.consume(outCh)
+		return e.handle(outCh)
 	})
 
 	err := eg.Wait()
@@ -95,7 +95,19 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 	}
 }
 
-func (e *Engine) consume(msgCh <-chan *multiMessages) error {
+func (e *Engine) consume(qm queuedMessage) error {
+	switch m := qm.(type) {
+	case *singleMessage:
+		// TODO (@hlts2): consume single message.
+	case *multiMessages:
+		return e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs)
+	}
+
+	// TODO(@hlts2): return error.
+	return nil
+}
+
+func (e *Engine) handle(msgCh <-chan queuedMessage) error {
 	e.Logger.Print("Start consume process")
 	defer e.Logger.Print("Finish consume process")
 
@@ -104,17 +116,17 @@ func (e *Engine) consume(msgCh <-chan *multiMessages) error {
 			m.Ack()
 		}
 
-		e.StatsHandler.HandleProcess(m.Ctx, &Dequeue{
-			BeginTime: m.EnqueuedAt,
+		e.StatsHandler.HandleProcess(m.Context(), &Dequeue{
+			BeginTime: m.GetEnqueuedAt(),
 			EndTime:   time.Now(),
 		})
 
 		beginTime := time.Now()
 
-		m.Ctx = e.StatsHandler.TagProcess(m.Ctx, &ConsumeBeginTag{})
+		m.SetContext(e.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
 
-		// // discard the error, because error can be handled with interceptor.
-		err := e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs)
+		// discard the error, because error can be handled with interceptor.
+		err := e.consume(m)
 		if !e.AckImmediately {
 			if err != nil {
 				m.Nack()
@@ -123,15 +135,15 @@ func (e *Engine) consume(msgCh <-chan *multiMessages) error {
 			}
 		}
 
-		e.StatsHandler.HandleProcess(m.Ctx, &ConsumeEnd{
+		e.StatsHandler.HandleProcess(m.Context(), &ConsumeEnd{
 			BeginTime: beginTime,
 			EndTime:   time.Now(),
 			Error:     err,
 		})
 
-		e.StatsHandler.HandleProcess(m.Ctx, &End{
-			MsgCount:  len(m.Msgs),
-			BeginTime: m.EnqueuedAt,
+		e.StatsHandler.HandleProcess(m.Context(), &End{
+			MsgCount:  m.Count(),
+			BeginTime: m.GetEnqueuedAt(),
 			EndTime:   time.Now(),
 		})
 	}

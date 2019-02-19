@@ -32,7 +32,7 @@ func TestCreateBufferedQueue(t *testing.T) {
 	for i, n := range []int{2, 3, 1, 2} {
 		out := <-outCh
 
-		if got, want := len(out.Msgs), n; got != want {
+		if got, want := out.Count(), n; got != want {
 			t.Errorf("Item[%d] has %d messages, want %d", i, got, want)
 		}
 	}
