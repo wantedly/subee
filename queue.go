@@ -51,6 +51,30 @@ func (s *singleMessage) Count() int { return 1 }
 
 func (s *singleMessage) GetEnqueuedAt() time.Time { return s.EnqueuedAt }
 
+func createQueue(
+	createCtx func() context.Context,
+) (
+	chan<- Message,
+	<-chan queuedMessage,
+) {
+	inCh := make(chan Message)
+	outCh := make(chan queuedMessage)
+
+	go func() {
+		defer close(outCh)
+
+		for msg := range inCh {
+			outCh <- &singleMessage{
+				Ctx:        createCtx(),
+				Msg:        msg,
+				EnqueuedAt: time.Now(),
+			}
+		}
+	}()
+
+	return inCh, outCh
+}
+
 func createBufferedQueue(
 	createCtx func() context.Context,
 	chunkSize int,
