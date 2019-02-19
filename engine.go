@@ -19,8 +19,13 @@ type Engine struct {
 
 // New creates a Engine intstance.
 func New(subscriber Subscriber, consumer MultiMessagesConsumer, opts ...Option) *Engine {
+	return newEngine(subscriber, consumer, nil, opts...)
+}
+
+func newEngine(subscriber Subscriber, mConsumer MultiMessagesConsumer, sConsumer SingleMessageConsumer, opts ...Option) *Engine {
 	cfg := newDefaultConfig()
-	cfg.MultiMessagesConsumer = consumer
+	cfg.MultiMessagesConsumer = mConsumer
+	cfg.SingleMessageConsumer = sConsumer
 	cfg.apply(opts)
 
 	e := &Engine{
