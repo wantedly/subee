@@ -111,7 +111,7 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 func (e *Engine) consume(qm queuedMessage) error {
 	switch m := qm.(type) {
 	case *singleMessage:
-		// TODO (@hlts2): consume single message.
+		return e.SingleMessageConsumer.Consume(m.Ctx, m.Msg)
 	case *multiMessages:
 		return e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs)
 	}
