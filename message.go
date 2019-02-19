@@ -6,7 +6,7 @@ type Message interface {
 	Data() []byte
 }
 
-// Acknowledger is an interface to send ack or nack.
+// Acknowledger is an interface to send ACK/NACK.
 type Acknowledger interface {
 	Ack()
 	Nack()
