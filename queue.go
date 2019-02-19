@@ -13,6 +13,24 @@ type queuedMessage interface {
 	GetEnqueuedAt() time.Time
 }
 
+type singleMessage struct {
+	Ctx        context.Context
+	Msg        Message
+	EnqueuedAt time.Time
+}
+
+func (s *singleMessage) Ack() { s.Msg.Ack() }
+
+func (s *singleMessage) Nack() { s.Msg.Nack() }
+
+func (s *singleMessage) Context() context.Context { return s.Ctx }
+
+func (s *singleMessage) SetContext(ctx context.Context) { s.Ctx = ctx }
+
+func (s *singleMessage) Count() int { return 1 }
+
+func (s *singleMessage) GetEnqueuedAt() time.Time { return s.EnqueuedAt }
+
 type multiMessages struct {
 	Ctx        context.Context
 	Msgs       []Message
@@ -38,24 +56,6 @@ func (m *multiMessages) Context() context.Context { return m.Ctx }
 func (m *multiMessages) SetContext(ctx context.Context) { m.Ctx = ctx }
 
 func (m *multiMessages) GetEnqueuedAt() time.Time { return m.EnqueuedAt }
-
-type singleMessage struct {
-	Ctx        context.Context
-	Msg        Message
-	EnqueuedAt time.Time
-}
-
-func (s *singleMessage) Ack() { s.Msg.Ack() }
-
-func (s *singleMessage) Nack() { s.Msg.Nack() }
-
-func (s *singleMessage) Context() context.Context { return s.Ctx }
-
-func (s *singleMessage) SetContext(ctx context.Context) { s.Ctx = ctx }
-
-func (s *singleMessage) Count() int { return 1 }
-
-func (s *singleMessage) GetEnqueuedAt() time.Time { return s.EnqueuedAt }
 
 func createQueue(
 	createCtx func() context.Context,

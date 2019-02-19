@@ -52,12 +52,12 @@ func (e *Engine) Start(ctx context.Context) error {
 	)
 
 	if e.SingleMessageConsumer != nil {
-		inCh, outCh = createQueue(e.createStatsHandlerCtx)
+		inCh, outCh = createQueue(e.createStatsTagCtx)
 	}
 
 	if e.MultiMessagesConsumer != nil {
 		inCh, outCh = createBufferedQueue(
-			e.createStatsHandlerCtx,
+			e.createStatsTagCtx,
 			e.ChunkSize,
 			e.FlushInterval,
 		)
@@ -79,7 +79,7 @@ func (e *Engine) Start(ctx context.Context) error {
 	return errors.WithStack(err)
 }
 
-func (e *Engine) createStatsHandlerCtx() context.Context {
+func (e *Engine) createStatsTagCtx() context.Context {
 	ctx := context.Background()
 	ctx = e.StatsHandler.TagProcess(ctx, &BeginTag{})
 	ctx = e.StatsHandler.TagProcess(ctx, &EnqueueTag{})
