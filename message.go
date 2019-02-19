@@ -4,6 +4,7 @@ package subee
 type Message interface {
 	Acknowledger
 	Data() []byte
+	Metadata() map[string]string
 }
 
 // Acknowledger is an interface to send ACK/NACK.

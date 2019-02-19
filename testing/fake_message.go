@@ -4,9 +4,10 @@ import "sync/atomic"
 
 // FakeMessage implements Message interface.
 type FakeMessage struct {
-	data   []byte
-	acked  int32
-	nacked int32
+	data     []byte
+	metadata map[string]string
+	acked    int32
+	nacked   int32
 }
 
 // NewFakeMessage creates a new FakeMessage object.
@@ -23,6 +24,9 @@ func NewFakeMessage(data []byte, acked, nacked bool) *FakeMessage {
 
 // Data returns the message'm payload.
 func (m *FakeMessage) Data() []byte { return m.data }
+
+// Metadata returns the message'm payload.
+func (m *FakeMessage) Metadata() map[string]string { return m.metadata }
 
 // Ack changes the mssage state to 'Acked'.
 func (m *FakeMessage) Ack() { atomic.StoreInt32(&m.acked, 1) }

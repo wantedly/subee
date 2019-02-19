@@ -46,12 +46,17 @@ func TestSubscriber(t *testing.T) {
 	)
 	orDie(t, err)
 
-	in := [][]byte{
-		[]byte("foo"),
-		[]byte("qux"),
-		[]byte("baz"),
-		[]byte("bar"),
-		[]byte("quux"),
+	type Msg struct {
+		Data []byte
+		Meta map[string]string
+	}
+
+	in := []Msg{
+		{Data: []byte("foo")},
+		{Data: []byte("qux")},
+		{Data: []byte("baz"), Meta: map[string]string{"corge": "12", "id": "aaabbbccc"}},
+		{Data: []byte("bar")},
+		{Data: []byte("quux")},
 	}
 
 	msgCh := make(chan subee.Message)
@@ -61,8 +66,8 @@ func TestSubscriber(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for _, data := range in {
-			srv.Publish("projects/test-proj/topics/test-topic", data, nil)
+		for _, m := range in {
+			srv.Publish("projects/test-proj/topics/test-topic", m.Data, m.Meta)
 		}
 	}()
 
@@ -82,14 +87,14 @@ func TestSubscriber(t *testing.T) {
 		}
 	}()
 
-	out := [][]byte{}
+	out := []Msg{}
 	for m := range msgCh {
-		out = append(out, m.Data())
+		out = append(out, Msg{Data: m.Data(), Meta: m.Metadata()})
 	}
 
-	sorter := cmp.Transformer("Sort", func(in [][]byte) [][]byte {
-		out := append([][]byte(nil), in...)
-		sort.Slice(out, func(i, j int) bool { return string(out[i]) < string(out[j]) })
+	sorter := cmp.Transformer("Sort", func(in []Msg) []Msg {
+		out := append([]Msg(nil), in...)
+		sort.Slice(out, func(i, j int) bool { return string(out[i].Data) < string(out[j].Data) })
 		return out
 	})
 	if diff := cmp.Diff(in, out, sorter); diff != "" {

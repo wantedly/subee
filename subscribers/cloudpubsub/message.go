@@ -9,3 +9,6 @@ type Message struct {
 
 // Data returns *pubsub.Message.Data
 func (m *Message) Data() []byte { return m.Message.Data }
+
+// Metadata returns message attributes.
+func (m *Message) Metadata() map[string]string { return m.Message.Attributes }
