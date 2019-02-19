@@ -6,8 +6,7 @@ import (
 )
 
 type queuedMessage interface {
-	Ack()
-	Nack()
+	Acknowledger
 	Count() int
 	Context() context.Context
 	SetContext(ctx context.Context)
