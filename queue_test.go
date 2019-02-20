@@ -69,7 +69,7 @@ func TestCreateBufferedQueue(t *testing.T) {
 		}
 
 		if m, ok := out.(*multiMessages); !ok {
-			t.Errorf("Item[%d] is %T type, want *subee.MultiMessagesConsumer type", i, m)
+			t.Errorf("Item[%d] is %T type, want *subee.multiMessages type", i, m)
 		}
 	}
 
