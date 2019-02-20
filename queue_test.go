@@ -67,6 +67,10 @@ func TestCreateBufferedQueue(t *testing.T) {
 		if got, want := out.Count(), n; got != want {
 			t.Errorf("Item[%d] has %d messages, want %d", i, got, want)
 		}
+
+		if m, ok := out.(*multiMessages); !ok {
+			t.Errorf("Item[%d] is %T type, want *subee.MultiMessagesConsumer type", i, m)
+		}
 	}
 
 	_, ok := <-outCh
