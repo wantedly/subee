@@ -182,7 +182,7 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 		return nil
 	})
 
-	engine := subee.New(
+	engine := subee.NewWithMultiMessagesConsumer(
 		subscriber,
 		consumer,
 		subee.WithChunkSize(3),

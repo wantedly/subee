@@ -17,11 +17,6 @@ type Engine struct {
 	subscriber Subscriber
 }
 
-// New creates a Engine intstance.
-func New(subscriber Subscriber, consumer MultiMessagesConsumer, opts ...Option) *Engine {
-	return newEngine(subscriber, consumer, nil, opts...)
-}
-
 // NewWithSingleMessageConsumer creates a Engine intstance with SingleMessageConsumer.
 func NewWithSingleMessageConsumer(subscriber Subscriber, consumer SingleMessageConsumer, opts ...Option) *Engine {
 	return newEngine(subscriber, nil, consumer, opts...)
