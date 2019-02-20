@@ -7,16 +7,16 @@ type Option func(*Config)
 
 // WithSingleMessageConsumerInterceptors returns an Option that sets the SingleMessageConsumerInterceptor implementations(s).
 // Interceptors are called in order of addition.
-// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessageConsumer.Consume
+// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => SingleMessageConsumer.Consume
 func WithSingleMessageConsumerInterceptors(interceptors ...SingleMessageConsumerInterceptor) Option {
 	return func(c *Config) {
 		c.SingleMessageConsumer = chainSingleMessageConsumerInterceptors(c.SingleMessageConsumer, interceptors...)
 	}
 }
 
-// WithMultiMessagesConsumerInterceptors returns an Option that sets the MultiMessageConsumerInterceptor implementations(s).
+// WithMultiMessagesConsumerInterceptors returns an Option that sets the MultiMessagesConsumerInterceptor implementations(s).
 // Interceptors are called in order of addition.
-// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessageConsumer.Consume
+// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessagesConsumer.Consume
 func WithMultiMessagesConsumerInterceptors(interceptors ...MultiMessagesConsumerInterceptor) Option {
 	return func(c *Config) {
 		c.MultiMessagesConsumer = chainMultiMessagesConsumerInterceptors(c.MultiMessagesConsumer, interceptors...)
