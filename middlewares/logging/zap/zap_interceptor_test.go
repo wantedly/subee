@@ -42,6 +42,11 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := dummyLogger(buf)
 
+	want := `{"level":"INFO","msg":"Start consume message.","message_count":1}
+{"level":"INFO","msg":"called single message consumer func"}
+{"level":"INFO","msg":"End consume message.","message_count":1,"time":"0s"}
+`
+
 	SingleMessageConsumerInterceptor(logger)(
 		subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
 			logger.Info("called single message consumer func")
@@ -52,11 +57,7 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 		message_testing.NewFakeMessage(nil, false, false),
 	)
 
-	want := `{"level":"INFO","msg":"Start consume message.","message_count":1}
-{"level":"INFO","msg":"called single message consumer func"}
-{"level":"INFO","msg":"End consume message.","message_count":1,"time":"0s"}
-`
-	if got, want := buf.String(), want; got != want {
+	if got := buf.String(); got != want {
 		t.Errorf("\nwant:\n%sgot:\n%s", want, got)
 	}
 }
@@ -73,6 +74,11 @@ func TestMultiMessagesConsumerInterceptor(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger := dummyLogger(buf)
 
+	want := `{"level":"INFO","msg":"Start consume message.","message_count":2}
+{"level":"INFO","msg":"called single message consumer func"}
+{"level":"INFO","msg":"End consume message.","message_count":2,"time":"0s"}
+`
+
 	MultiMessagesConsumerInterceptor(logger)(
 		subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
 			logger.Info("called single message consumer func")
@@ -86,12 +92,7 @@ func TestMultiMessagesConsumerInterceptor(t *testing.T) {
 		},
 	)
 
-	want := `{"level":"INFO","msg":"Start consume message.","message_count":2}
-{"level":"INFO","msg":"called single message consumer func"}
-{"level":"INFO","msg":"End consume message.","message_count":2,"time":"0s"}
-`
-	if got, want := buf.String(), want; got != want {
+	if got := buf.String(); got != want {
 		t.Errorf("\nwant:\n%sgot:\n%s", want, got)
 	}
-
 }

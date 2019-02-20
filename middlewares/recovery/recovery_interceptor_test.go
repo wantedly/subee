@@ -3,15 +3,16 @@ package subee_recovery
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/wantedly/subee"
 	message_testing "github.com/wantedly/subee/testing"
 )
 
-func writeHandler(buf *bytes.Buffer, tag string) RecoveryHandlerFunc {
+func writeHandler(buf *bytes.Buffer) RecoveryHandlerFunc {
 	return func(ctx context.Context, p interface{}) {
-		buf.Write([]byte(tag))
+		buf.Write([]byte(fmt.Sprint(p)))
 	}
 }
 
@@ -20,9 +21,9 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 
 	tag := "SingleMessageConsumer"
 
-	SingleMessageConsumerInterceptor(writeHandler(buf, tag))(
+	SingleMessageConsumerInterceptor(writeHandler(buf))(
 		subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
-			panic("occurs panic")
+			panic(tag)
 			return nil
 		}),
 	).Consume(
@@ -31,7 +32,7 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 	)
 
 	if got, want := buf.String(), tag; got != want {
-		t.Errorf("want:%v, but: %v", want, got)
+		t.Errorf("\nwant:\n%sgot:\n%s", want, got)
 	}
 }
 
@@ -40,9 +41,9 @@ func TestMultiMessagesConsumerInterceptor(t *testing.T) {
 
 	tag := "MultiMessagesConsumer"
 
-	SingleMessageConsumerInterceptor(writeHandler(buf, tag))(
+	SingleMessageConsumerInterceptor(writeHandler(buf))(
 		subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
-			panic("occurs panic")
+			panic(tag)
 			return nil
 		}),
 	).Consume(
@@ -51,6 +52,6 @@ func TestMultiMessagesConsumerInterceptor(t *testing.T) {
 	)
 
 	if got, want := buf.String(), tag; got != want {
-		t.Errorf("want:%v, but: %v", want, got)
+		t.Errorf("\nwant:\n%sgot:\n%s", want, got)
 	}
 }
