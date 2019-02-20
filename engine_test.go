@@ -16,6 +16,7 @@ import (
 
 func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	in := [][]byte{
+		[]byte("foo"),
 		[]byte("error!!"),
 	}
 
@@ -30,6 +31,10 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	}
 
 	cases := []TestCase{
+		{
+			test: "acked when no error",
+			want: subee_testing.NewFakeMessage([]byte("foo"), true, false),
+		},
 		{
 			test: "nacked when errored",
 			want: subee_testing.NewFakeMessage([]byte("error!!"), false, true),
