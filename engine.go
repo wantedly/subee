@@ -119,14 +119,12 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 }
 
 func (e *Engine) consume(qm queuedMessage) error {
-	switch m := qm.(type) {
-	case *singleMessage:
+	if m, ok := qm.(*singleMessage); ok {
 		return errors.WithStack(e.SingleMessageConsumer.Consume(m.Ctx, m.Msg))
-	case *multiMessages:
-		return errors.WithStack(e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs))
 	}
 
-	return errors.New("unsupported message type")
+	m := qm.(*multiMessages)
+	return errors.WithStack(e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs))
 }
 
 func (e *Engine) handle(msgCh <-chan queuedMessage) error {
