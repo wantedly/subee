@@ -14,6 +14,98 @@ import (
 	subee_testing "github.com/wantedly/subee/testing"
 )
 
+func TestEngineWithSingleMessageConsumer(t *testing.T) {
+	in := [][]byte{
+		[]byte("error!!"),
+	}
+
+	type TestCase struct {
+		test string
+		want *subee_testing.FakeMessage
+		err  bool
+	}
+	type Result struct {
+		msg *subee_testing.FakeMessage
+		tc  TestCase
+	}
+
+	cases := []TestCase{
+		{
+			test: "nacked when errored",
+			want: subee_testing.NewFakeMessage([]byte("error!!"), false, true),
+			err:  true,
+		},
+	}
+	resultCh := make(chan *Result, len(cases))
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var cur int
+	subscriber := subee_testing.NewFakeSubscriber()
+	consumer := subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+		r := &Result{
+			tc:  cases[cur],
+			msg: msg.(*subee_testing.FakeMessage),
+		}
+
+		resultCh <- r
+		cur++
+		if cur == len(cases) {
+			close(resultCh)
+			cancel()
+		}
+		if r.tc.err {
+			return errors.New("error")
+		}
+		return nil
+	})
+
+	engine := subee.NewWithSingleMessageConsumer(
+		subscriber,
+		consumer,
+		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := engine.Start(ctx)
+		if err != nil {
+			t.Errorf("Start returned an error: %v", err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		time.Sleep(3 * time.Millisecond)
+		for _, m := range in {
+			subscriber.AddMessage(subee_testing.NewFakeMessage(m, false, false))
+			time.Sleep(6 * time.Millisecond)
+		}
+	}()
+
+	for r := range resultCh {
+		r := r
+		t.Run(r.tc.test, func(t *testing.T) {
+			got, want := r.msg, r.tc.want
+
+			if got, want := got.Data(), want.Data(); !reflect.DeepEqual(got, want) {
+				t.Errorf("Message.Data() is %q, want %q", got, want)
+			}
+			if got, want := got.Acked(), want.Acked(); got != want {
+				t.Errorf("Messages.Acked() is %t, want %t", got, want)
+			}
+			if got, want := got.Nacked(), want.Nacked(); got != want {
+				t.Errorf("Messages.Nacked() is %t, want %t", got, want)
+			}
+		})
+	}
+}
+
 func TestEngine(t *testing.T) {
 	in := [][][]byte{
 		{
