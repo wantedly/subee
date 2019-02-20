@@ -22,6 +22,16 @@ func New(subscriber Subscriber, consumer MultiMessagesConsumer, opts ...Option) 
 	return newEngine(subscriber, consumer, nil, opts...)
 }
 
+// NewWithSingleMessageConsumer creates a Engine intstance with SingleMessageConsumer.
+func NewWithSingleMessageConsumer(subscriber Subscriber, consumer SingleMessageConsumer, opts ...Option) *Engine {
+	return newEngine(subscriber, nil, consumer, opts...)
+}
+
+// NewWithMultiMessagesConsumer creates a Engine intstance with MultiMessagesConsumer.
+func NewWithMultiMessagesConsumer(subscriber Subscriber, consumer MultiMessagesConsumer, opts ...Option) *Engine {
+	return newEngine(subscriber, consumer, nil, opts...)
+}
+
 func newEngine(subscriber Subscriber, mConsumer MultiMessagesConsumer, sConsumer SingleMessageConsumer, opts ...Option) *Engine {
 	cfg := newDefaultConfig()
 	cfg.MultiMessagesConsumer = mConsumer
