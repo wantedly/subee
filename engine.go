@@ -62,12 +62,14 @@ func (e *Engine) Start(ctx context.Context) error {
 	)
 
 	if e.SingleMessageConsumer != nil {
-		inCh, outCh = createQueue(e.createStatsTagCtx)
+		inCh, outCh = createQueue(
+			queuingContext(e.StatsHandler),
+		)
 	}
 
 	if e.MultiMessagesConsumer != nil {
 		inCh, outCh = createBufferedQueue(
-			e.createStatsTagCtx,
+			queuingContext(e.StatsHandler),
 			e.ChunkSize,
 			e.FlushInterval,
 		)
@@ -87,13 +89,6 @@ func (e *Engine) Start(ctx context.Context) error {
 	err := eg.Wait()
 
 	return errors.WithStack(err)
-}
-
-func (e *Engine) createStatsTagCtx() context.Context {
-	ctx := context.Background()
-	ctx = e.StatsHandler.TagProcess(ctx, &BeginTag{})
-	ctx = e.StatsHandler.TagProcess(ctx, &EnqueueTag{})
-	return ctx
 }
 
 func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.CancelFunc) error {
