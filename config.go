@@ -27,6 +27,8 @@ type Config struct {
 	StatsHandler StatsHandler
 
 	MultiMessagesConsumer MultiMessagesConsumer
+
+	SingleMessageConsumer SingleMessageConsumer
 }
 
 func (c *Config) apply(opts []Option) {

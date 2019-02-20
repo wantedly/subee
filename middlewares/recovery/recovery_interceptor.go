@@ -10,7 +10,22 @@ import (
 // RecoveryHandlerFunc is a function that recovers from the panic `p`
 type RecoveryHandlerFunc func(ctx context.Context, p interface{})
 
-// MultiMessagesConsumerInterceptor returns a new interceptor to recovery from panic.
+// SingleMessageConsumerInterceptor returns a new single message interceptor to recovery from panic.
+func SingleMessageConsumerInterceptor(f RecoveryHandlerFunc) subee.SingleMessageConsumerInterceptor {
+	return func(consumer subee.SingleMessageConsumer) subee.SingleMessageConsumer {
+		return subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+			defer func() {
+				if r := recover(); r != nil {
+					f(ctx, r)
+				}
+			}()
+
+			return errors.WithStack(consumer.Consume(ctx, msg))
+		})
+	}
+}
+
+// MultiMessagesConsumerInterceptor returns a new multi messages interceptor to recovery from panic.
 func MultiMessagesConsumerInterceptor(f RecoveryHandlerFunc) subee.MultiMessagesConsumerInterceptor {
 	return func(consumer subee.MultiMessagesConsumer) subee.MultiMessagesConsumer {
 		return subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {

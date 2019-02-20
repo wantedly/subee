@@ -11,7 +11,30 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// MultiMessagesConsumerInterceptor returns a new interceptor for logging with zap.
+var since = func(t time.Time) time.Duration {
+	return time.Since(t)
+}
+
+// SingleMessageConsumerInterceptor returns a new single message consumer interceptor for logging with zap.
+func SingleMessageConsumerInterceptor(logger *zap.Logger) subee.SingleMessageConsumerInterceptor {
+	return func(consumer subee.SingleMessageConsumer) subee.SingleMessageConsumer {
+		return subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+			msgCnt := 1
+
+			startConsume(logger, msgCnt)
+
+			startTime := time.Now()
+
+			err := consumer.Consume(ctx, msg)
+
+			endConsume(logger, since(startTime), msgCnt, err)
+
+			return errors.WithStack(err)
+		})
+	}
+}
+
+// MultiMessagesConsumerInterceptor returns a new multi messages consumer interceptor for logging with zap.
 func MultiMessagesConsumerInterceptor(logger *zap.Logger) subee.MultiMessagesConsumerInterceptor {
 	return func(consumer subee.MultiMessagesConsumer) subee.MultiMessagesConsumer {
 		return subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
@@ -21,7 +44,7 @@ func MultiMessagesConsumerInterceptor(logger *zap.Logger) subee.MultiMessagesCon
 
 			err := consumer.Consume(ctx, msgs)
 
-			endConsume(logger, time.Since(startTime), len(msgs), err)
+			endConsume(logger, since(startTime), len(msgs), err)
 
 			return errors.WithStack(err)
 		})

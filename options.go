@@ -5,13 +5,33 @@ import "time"
 // Option configures Config.
 type Option func(*Config)
 
-// WithMultiMessagesConsumerInterceptors returns an Option that sets the MultiMessageConsumerInterceptor implementations(s).
+// WithSingleMessageConsumerInterceptors returns an Option that sets the SingleMessageConsumerInterceptor implementations(s).
 // Interceptors are called in order of addition.
-// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessageConsumer.Consume
+// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => SingleMessageConsumer.Consume
+func WithSingleMessageConsumerInterceptors(interceptors ...SingleMessageConsumerInterceptor) Option {
+	return func(c *Config) {
+		c.SingleMessageConsumer = chainSingleMessageConsumerInterceptors(c.SingleMessageConsumer, interceptors...)
+	}
+}
+
+// WithMultiMessagesConsumerInterceptors returns an Option that sets the MultiMessagesConsumerInterceptor implementations(s).
+// Interceptors are called in order of addition.
+// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessagesConsumer.Consume
 func WithMultiMessagesConsumerInterceptors(interceptors ...MultiMessagesConsumerInterceptor) Option {
 	return func(c *Config) {
 		c.MultiMessagesConsumer = chainMultiMessagesConsumerInterceptors(c.MultiMessagesConsumer, interceptors...)
 	}
+}
+
+func chainSingleMessageConsumerInterceptors(consumer SingleMessageConsumer, interceptors ...SingleMessageConsumerInterceptor) SingleMessageConsumer {
+	if len(interceptors) == 0 {
+		return consumer
+	}
+
+	for i := len(interceptors) - 1; i >= 0; i-- {
+		consumer = interceptors[i](consumer)
+	}
+	return consumer
 }
 
 func chainMultiMessagesConsumerInterceptors(consumer MultiMessagesConsumer, interceptors ...MultiMessagesConsumerInterceptor) MultiMessagesConsumer {
