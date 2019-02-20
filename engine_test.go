@@ -106,7 +106,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	}
 }
 
-func TestEngine(t *testing.T) {
+func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 	in := [][][]byte{
 		{
 			[]byte("foo"),
