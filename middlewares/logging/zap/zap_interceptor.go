@@ -11,7 +11,26 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// MultiMessagesConsumerInterceptor returns a new interceptor for logging with zap.
+// SingleMessageConsumerInterceptor returns a new single message consumer interceptor for logging with zap.
+func SingleMessageConsumerInterceptor(logger *zap.Logger) subee.SingleMessageConsumerInterceptor {
+	return func(consumer subee.SingleMessageConsumer) subee.SingleMessageConsumer {
+		return subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+			msgCnt := 1
+
+			startConsume(logger, msgCnt)
+
+			startTime := time.Now()
+
+			err := consumer.Consume(ctx, msg)
+
+			endConsume(logger, time.Since(startTime), msgCnt, err)
+
+			return errors.WithStack(err)
+		})
+	}
+}
+
+// MultiMessagesConsumerInterceptor returns a new multi messages consumer interceptor for logging with zap.
 func MultiMessagesConsumerInterceptor(logger *zap.Logger) subee.MultiMessagesConsumerInterceptor {
 	return func(consumer subee.MultiMessagesConsumer) subee.MultiMessagesConsumer {
 		return subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
