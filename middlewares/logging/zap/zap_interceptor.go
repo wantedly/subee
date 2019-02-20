@@ -11,6 +11,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var since = func(t time.Time) time.Duration {
+	return time.Since(t)
+}
+
 // SingleMessageConsumerInterceptor returns a new single message consumer interceptor for logging with zap.
 func SingleMessageConsumerInterceptor(logger *zap.Logger) subee.SingleMessageConsumerInterceptor {
 	return func(consumer subee.SingleMessageConsumer) subee.SingleMessageConsumer {
@@ -23,7 +27,7 @@ func SingleMessageConsumerInterceptor(logger *zap.Logger) subee.SingleMessageCon
 
 			err := consumer.Consume(ctx, msg)
 
-			endConsume(logger, time.Since(startTime), msgCnt, err)
+			endConsume(logger, since(startTime), msgCnt, err)
 
 			return errors.WithStack(err)
 		})
@@ -40,7 +44,7 @@ func MultiMessagesConsumerInterceptor(logger *zap.Logger) subee.MultiMessagesCon
 
 			err := consumer.Consume(ctx, msgs)
 
-			endConsume(logger, time.Since(startTime), len(msgs), err)
+			endConsume(logger, since(startTime), len(msgs), err)
 
 			return errors.WithStack(err)
 		})
