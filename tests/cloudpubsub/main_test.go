@@ -23,7 +23,6 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	in := createInputData(10)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	const subscriptionID = "subscription_id_for_single_message_consumer"
 
@@ -93,7 +92,6 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 	in := createInputData(10)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	const subscriptionID = "subscription_id_for_multi_messages_consumer"
 
