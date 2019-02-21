@@ -35,9 +35,6 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		t.Fatalf("createPublisher returned error: %v", err)
 	}
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
 	subscriber, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
 	if err != nil {
 		t.Fatalf("CreateSubscriber returned an error: %v", err)
@@ -58,6 +55,9 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 
 		return nil
 	})
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
 
 	engine := subee.NewWithSingleMessageConsumer(
 		subscriber,
@@ -108,9 +108,6 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 		t.Fatalf("createPublisher returned error: %v", err)
 	}
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
-
 	subscriber, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
 	if err != nil {
 		t.Fatalf("CreateSubscriber returned an error: %v", err)
@@ -131,6 +128,9 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 
 		return nil
 	})
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
 
 	engine := subee.NewWithMultiMessagesConsumer(
 		subscriber,
