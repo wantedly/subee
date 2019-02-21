@@ -4,11 +4,8 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
-	"reflect"
 	"sync"
 	"testing"
-
-	"cloud.google.com/go/pubsub"
 
 	"github.com/wantedly/subee"
 	"github.com/wantedly/subee/subscribers/cloudpubsub"
@@ -23,41 +20,15 @@ const (
 )
 
 func TestEngineWithSingleMessageConsumer(t *testing.T) {
-	in := [][]byte{
-		[]byte("foo"),
-		[]byte("var"),
-	}
-
-	type TestCase struct {
-		test string
-		want *pubsub.Message
-	}
-
-	type Result struct {
-		msg subee.Message
-		tc  TestCase
-	}
-
-	cases := []TestCase{
-		{
-			test: "acked when no error",
-			want: &pubsub.Message{
-				Data: in[0],
-			},
-		},
-		{
-			test: "nacked when errored",
-			want: &pubsub.Message{
-				Data: in[1],
-			},
-		},
+	in := make([][]byte, 10)
+	for i := 0; i < len(in); i++ {
+		in[i] = []byte{byte(i)}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// const subscriptionID = "single_message_consumer"
-	const subscriptionID = "test1"
+	const subscriptionID = "subscription_id_for_single_message_consumer"
 
 	publisher, err := createPublisher(ctx, projectID, topicID, subscriptionID)
 	if err != nil {
@@ -67,26 +38,21 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	resultCh := make(chan *Result, len(cases))
-
 	subscriber, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
 	if err != nil {
 		t.Fatalf("CreateSubscriber returned an error: %v", err)
 	}
 
+	msgCh := make(chan subee.Message)
+
 	var cur int
 	consumer := subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
-		r := &Result{
-			tc:  cases[cur],
-			msg: msg,
-		}
-
-		resultCh <- r
+		msgCh <- msg
 
 		cur++
 
-		if cur == len(cases) {
-			close(resultCh)
+		if cur == len(in) {
+			close(msgCh)
 			cancel()
 		}
 
@@ -114,13 +80,14 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		publisher.publish(ctx, in)
 	}()
 
-	for r := range resultCh {
-		t.Run(r.tc.test, func(t *testing.T) {
-			got, want := r.msg, r.tc.want
+	var seen [10]bool
+	for m := range msgCh {
+		seen[m.Data()[0]] = true
+	}
 
-			if got, want := got.Data(), want.Data; !reflect.DeepEqual(got, want) {
-				t.Errorf("Data is %q, want: %q", got, want)
-			}
-		})
+	for i, saw := range seen {
+		if !saw {
+			t.Errorf("did not see message #%d", i)
+		}
 	}
 }
