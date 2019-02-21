@@ -8,4 +8,4 @@ coverage:
         target: 80%
 
 ignore:
-  - "**/testing/*"
+  - "{,**/}testing/*"
