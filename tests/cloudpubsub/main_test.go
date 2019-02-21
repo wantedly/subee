@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/wantedly/subee"
 	"github.com/wantedly/subee/subscribers/cloudpubsub"
@@ -127,6 +128,8 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 	engine := subee.NewWithMultiMessagesConsumer(
 		subscriber,
 		consumer,
+		subee.WithChunkSize(3),
+		subee.WithFlushInterval(4*time.Millisecond),
 		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
 	)
 
