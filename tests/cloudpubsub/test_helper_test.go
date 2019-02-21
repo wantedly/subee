@@ -55,3 +55,11 @@ func (p *publisher) publish(ctx context.Context, in [][]byte) {
 		time.Sleep(6 * time.Millisecond)
 	}
 }
+
+func createInputData(n int) [][]byte {
+	in := make([][]byte, 10)
+	for i := 0; i < len(in); i++ {
+		in[i] = []byte{byte(i)}
+	}
+	return in
+}

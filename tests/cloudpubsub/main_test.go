@@ -20,10 +20,7 @@ const (
 )
 
 func TestEngineWithSingleMessageConsumer(t *testing.T) {
-	in := make([][]byte, 10)
-	for i := 0; i < len(in); i++ {
-		in[i] = []byte{byte(i)}
-	}
+	in := createInputData(10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -80,7 +77,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		publisher.publish(ctx, in)
 	}()
 
-	var seen [10]bool
+	seen := make([]bool, len(in))
 	for m := range msgCh {
 		seen[m.Data()[0]] = true
 	}
@@ -93,15 +90,12 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 }
 
 func TestEngineWithMultiMessagesConsumer(t *testing.T) {
-	in := make([][]byte, 10)
-	for i := 0; i < len(in); i++ {
-		in[i] = []byte{byte(i)}
-	}
+	in := createInputData(10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	const subscriptionID = "testes"
+	const subscriptionID = "subscription_id_for_multi_messages_consumer"
 
 	publisher, err := createPublisher(ctx, projectID, topicID, subscriptionID)
 	if err != nil {
@@ -153,7 +147,7 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 		publisher.publish(ctx, in)
 	}()
 
-	var seen [10]bool
+	seen := make([]bool, len(in))
 	for ms := range msgsCh {
 		for _, m := range ms {
 			seen[m.Data()[0]] = true
