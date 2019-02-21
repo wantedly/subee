@@ -25,15 +25,17 @@ func createPublisher(ctx context.Context, projectID, topicID, subscriptionID str
 	}
 
 	subscription := client.Subscription(subscriptionID)
-	if ok, _ := subscription.Exists(ctx); !ok {
-		client.CreateSubscription(
-			ctx,
-			subscriptionID,
-			pubsub.SubscriptionConfig{
-				Topic: topic,
-			},
-		)
+	if ok, _ := subscription.Exists(ctx); ok {
+		subscription.Delete(ctx)
 	}
+
+	client.CreateSubscription(
+		ctx,
+		subscriptionID,
+		pubsub.SubscriptionConfig{
+			Topic: topic,
+		},
+	)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "faild to create pub/sub subscription")
