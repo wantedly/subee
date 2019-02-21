@@ -90,7 +90,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 }
 
 func TestEngineWithMultiMessagesConsumer(t *testing.T) {
-	in := createInputData(10)
+	in := createInputData(250)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
