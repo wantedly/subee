@@ -91,3 +91,78 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		}
 	}
 }
+
+func TestEngineWithMultiMessagesConsumer(t *testing.T) {
+	in := make([][]byte, 10)
+	for i := 0; i < len(in); i++ {
+		in[i] = []byte{byte(i)}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	const subscriptionID = "testes"
+
+	publisher, err := createPublisher(ctx, projectID, topicID, subscriptionID)
+	if err != nil {
+		t.Fatalf("createPublisher returned error: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	subscriber, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
+	if err != nil {
+		t.Fatalf("CreateSubscriber returned an error: %v", err)
+	}
+
+	msgsCh := make(chan []subee.Message)
+
+	var cur int
+	consumer := subee.MultiMessagesConsumerFunc(func(ctx context.Context, msg []subee.Message) error {
+		msgsCh <- msg
+
+		cur++
+
+		if cur == len(in) {
+			close(msgsCh)
+			cancel()
+		}
+
+		return nil
+	})
+
+	engine := subee.NewWithMultiMessagesConsumer(
+		subscriber,
+		consumer,
+		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := engine.Start(ctx)
+		if err != nil {
+			t.Errorf("Start returned an error: %v", err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		publisher.publish(ctx, in)
+	}()
+
+	var seen [10]bool
+	for ms := range msgsCh {
+		for _, m := range ms {
+			seen[m.Data()[0]] = true
+		}
+	}
+
+	for i, saw := range seen {
+		if !saw {
+			t.Errorf("did not see message #%d", i)
+		}
+	}
+}
