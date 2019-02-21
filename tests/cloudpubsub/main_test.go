@@ -21,7 +21,7 @@ const (
 )
 
 func TestEngineWithSingleMessageConsumer(t *testing.T) {
-	in := createInputData(10)
+	in := createInputData(256)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -90,7 +90,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 }
 
 func TestEngineWithMultiMessagesConsumer(t *testing.T) {
-	in := createInputData(250)
+	in := createInputData(256)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
