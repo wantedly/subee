@@ -37,6 +37,35 @@ jobs:
           condition: << parameters.cover >>
           steps:
             - run: go test -race -v ./...
+  e2e:
+    parameters:
+      exec:
+        type: executor
+    executor: << parameters.exec >>
+    docker:
+      - image: google/cloud-sdk:174.0.0
+        command: [gcloud, beta, emulators, pubsub, start, '--host-port=localhost:8085']
+    environment:
+      PUBSUB_EMULATOR_HOST: localhost:8085
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
+      - run: go mod download
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod/cache"
+      - run:
+        name: install dockerize
+        command: curl -sfL https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz | tar -C /usr/local/bin -xzv
+          environment:
+            DOCKERIZE_VERSION: v0.3.0
+      - run:
+        name: Wait for pubsub emulator
+        command: dockerize -wait tcp://${PUBSUB_EMULATOR_HOST} -timeout 1m
+      - run: go test -v ./_tests/cloudpubsub
 
 workflows:
   version: 2
@@ -49,6 +78,16 @@ workflows:
             name: golang
             version: 1.12-rc
       - test:
+          name: 1.11.5
+          exec:
+            name: golang
+            version: 1.11.5
+      - e2e:
+          name: 1.12-rc
+          exec:
+            name: golang
+            version: 1.12-rc
+      - e2e:
           name: 1.11.5
           exec:
             name: golang
