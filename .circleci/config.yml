@@ -37,6 +37,27 @@ jobs:
           condition: << parameters.cover >>
           steps:
             - run: go test -race -v ./...
+  e2e:
+    docker:
+      - image: circleci/golang:1.11.5
+      - image: google/cloud-sdk:235.0.0
+        command: [gcloud, beta, emulators, pubsub, start, '--host-port=0.0.0.0:8085']
+    environment:
+      PUBSUB_EMULATOR_HOST: localhost:8085
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-v1-{{ checksum "go.sum" }}
+      - run: go mod download
+      - save_cache:
+          key: go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod/cache"
+      - run:
+          name: Wait for pubsub emulator
+          command: sleep 5
+      - run: go test -v ./_tests/cloudpubsub
 
 workflows:
   version: 2
@@ -53,3 +74,4 @@ workflows:
           exec:
             name: golang
             version: 1.11.5
+      - e2e
