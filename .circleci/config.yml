@@ -60,8 +60,8 @@ jobs:
       - run:
         name: install dockerize
         command: curl -sfL https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz | tar -C /usr/local/bin -xzv
-          environment:
-            DOCKERIZE_VERSION: v0.3.0
+        environment:
+          DOCKERIZE_VERSION: v0.3.0
       - run:
         name: Wait for pubsub emulator
         command: dockerize -wait tcp://${PUBSUB_EMULATOR_HOST} -timeout 1m
