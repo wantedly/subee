@@ -4,7 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,24 +37,12 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		t.Fatalf("CreateSubscriber returned an error: %v", err)
 	}
 
-	msgCh := make(chan subee.Message)
+	var cnt int64
 
-	var cur int
 	consumer := subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
-		msgCh <- msg
-
-		cur++
-
-		if cur == len(in) {
-			close(msgCh)
-			cancel()
-		}
-
+		atomic.AddInt64(&cnt, 1)
 		return nil
 	})
-
-	var wg sync.WaitGroup
-	defer wg.Wait()
 
 	engine := subee.NewWithSingleMessageConsumer(
 		subscriber,
@@ -62,30 +50,20 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
 	)
 
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		err := engine.Start(ctx)
-		if err != nil {
-			t.Errorf("Start returned an error: %v", err)
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 		publisher.publish(ctx, in)
+		time.Sleep(1 * time.Second)
+		cancel()
 	}()
 
-	seen := make([]bool, len(in))
-	for m := range msgCh {
-		seen[m.Data()[0]] = true
+	err = engine.Start(ctx)
+	if err != nil {
+		t.Errorf("Start returned an error: %v", err)
 	}
 
-	for i, saw := range seen {
-		if !saw {
-			t.Errorf("did not see message #%d", i)
-		}
+	got := int(atomic.LoadInt64(&cnt))
+	if want := len(in); want != got {
+		t.Errorf("want %d, got: %v", want, got)
 	}
 }
 
@@ -106,24 +84,12 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 		t.Fatalf("CreateSubscriber returned an error: %v", err)
 	}
 
-	msgsCh := make(chan []subee.Message)
+	var cnt int64
 
-	var cur int
 	consumer := subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
-		msgsCh <- msgs
-
-		cur += len(msgs)
-
-		if cur == len(in) {
-			close(msgsCh)
-			cancel()
-		}
-
+		atomic.AddInt64(&cnt, int64(len(msgs)))
 		return nil
 	})
-
-	var wg sync.WaitGroup
-	defer wg.Wait()
 
 	engine := subee.NewWithMultiMessagesConsumer(
 		subscriber,
@@ -133,31 +99,19 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
 	)
 
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
-		err := engine.Start(ctx)
-		if err != nil {
-			t.Errorf("Start returned an error: %v", err)
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 		publisher.publish(ctx, in)
+		time.Sleep(1 * time.Second)
+		cancel()
 	}()
 
-	seen := make([]bool, len(in))
-	for ms := range msgsCh {
-		for _, m := range ms {
-			seen[m.Data()[0]] = true
-		}
+	err = engine.Start(ctx)
+	if err != nil {
+		t.Errorf("Start returned an error: %v", err)
 	}
 
-	for i, saw := range seen {
-		if !saw {
-			t.Errorf("did not see message #%d", i)
-		}
+	got := int(atomic.LoadInt64(&cnt))
+	if want := len(in); want != got {
+		t.Errorf("want %d, got: %v", want, got)
 	}
 }

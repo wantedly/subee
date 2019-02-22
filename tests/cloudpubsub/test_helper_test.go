@@ -2,7 +2,6 @@ package cloudpubsub_test
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -47,12 +46,10 @@ func createPublisher(ctx context.Context, projectID, topicID, subscriptionID str
 }
 
 func (p *publisher) publish(ctx context.Context, in [][]byte) {
-	time.Sleep(3 * time.Millisecond)
 	for _, m := range in {
 		p.Topic.Publish(ctx, &pubsub.Message{
 			Data: m,
 		})
-		time.Sleep(6 * time.Millisecond)
 	}
 }
 
