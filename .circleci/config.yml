@@ -39,8 +39,8 @@ jobs:
             - run: go test -race -v ./...
   e2e:
     docker:
-      - image: circleci/golang:latest
-      - image: google/cloud-sdk:latest
+      - image: circleci/golang:1.11.5
+      - image: google/cloud-sdk:234.0.0
         command: [gcloud, beta, emulators, pubsub, start, '--host-port=0.0.0.0:8085']
     environment:
       PUBSUB_EMULATOR_HOST: localhost:8085
