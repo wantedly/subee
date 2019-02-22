@@ -40,7 +40,7 @@ jobs:
   e2e:
     docker:
       - image: circleci/golang:1.11.5
-      - image: google/cloud-sdk:234.0.0
+      - image: google/cloud-sdk:235.0.0
         command: [gcloud, beta, emulators, pubsub, start, '--host-port=0.0.0.0:8085']
     environment:
       PUBSUB_EMULATOR_HOST: localhost:8085
