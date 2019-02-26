@@ -86,14 +86,15 @@ func main() {
 	// producing events in background.
 	go publishEvents(ctx, publisher)
 
-	// Subscriber is created with subscriptionID.
-	subscriber, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
-	if err != nil {
-		panic(err)
-	}
-
 	engine := subee.NewWithSingleMessageConsumer(
-		subscriber,
+		// Subscriber is created with subscriptionID.
+		func() subee.Subscriber {
+			s, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
+			if err != nil {
+				panic(err)
+			}
+			return s
+		}(),
 		func() subee.SingleMessageConsumer {
 			return subee.SingleMessageConsumerFunc(
 				func(ctx context.Context, msg subee.Message) error {
