@@ -119,10 +119,7 @@ func main() {
 				func(ctx context.Context, msg subee.Message) error {
 					payload := event{}
 
-					err := json.Unmarshal(msg.Data(), &payload)
-					if err != nil {
-						return errors.Wrap(err, "faild to unmarshal message")
-					}
+					json.Unmarshal(msg.Data(), &payload)
 
 					logger.Info("received event",
 						zap.Int64("created_at", payload.CreatedAt),
