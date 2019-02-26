@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"time"
+
 	"cloud.google.com/go/pubsub"
 	"github.com/wantedly/subee"
 	"github.com/wantedly/subee/middlewares/logging/zap"
@@ -25,7 +27,7 @@ const (
 )
 
 type publisher struct {
-	Topic *pubsub.Topic
+	*pubsub.Topic
 }
 
 // createPublisher is a helper function which creates Publisher, in this case - Publisher of Google Cloud Pub/Sub.
@@ -59,8 +61,18 @@ func createPublisher(ctx context.Context) (*publisher, error) {
 }
 
 // publishEvents which will produce some events with async for consuming.
-func publishEvents(publisher *publisher) {
+func publishEvents(ctx context.Context, publisher *publisher) {
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
 
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			publisher.Topic.Publish(ctx, &pubsub.Message{})
+		}
+	}
 }
 
 func main() {
@@ -72,7 +84,7 @@ func main() {
 	}
 
 	// producing events in background.
-	go publishEvents(publisher)
+	go publishEvents(ctx, publisher)
 
 	// Subscriber is created with subscriptionID.
 	subscriber, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
@@ -80,22 +92,22 @@ func main() {
 		panic(err)
 	}
 
-	engine := subee.NewWithMultiMessagesConsumer(
+	engine := subee.NewWithSingleMessageConsumer(
 		subscriber,
-		func() subee.MultiMessagesConsumer {
-			return subee.MultiMessagesConsumerFunc(
-				func(ctx context.Context, msgs []subee.Message) error {
+		func() subee.SingleMessageConsumer {
+			return subee.SingleMessageConsumerFunc(
+				func(ctx context.Context, msg subee.Message) error {
 					return nil
 				},
 			)
 		}(),
-		subee.WithMultiMessagesConsumerInterceptors(
-			subee_recovery.MultiMessagesConsumerInterceptor(
+		subee.WithSingleMessageConsumerInterceptors(
+			subee_recovery.SingleMessageConsumerInterceptor(
 				func(ctx context.Context, p interface{}) {
 					log.Println(p)
 				},
 			),
-			subee_zap.MultiMessagesConsumerInterceptor(
+			subee_zap.SingleMessageConsumerInterceptor(
 				func() *zap.Logger {
 					logger, err := zap.NewProduction()
 					if err != nil {
