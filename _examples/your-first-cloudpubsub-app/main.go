@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/pkg/errors"
@@ -29,6 +30,11 @@ const (
 
 type publisher struct {
 	*pubsub.Topic
+}
+
+// event represents message structor to be published.
+type event struct {
+	CreatedAt int64
 }
 
 // createPublisher is a helper function which creates Publisher, in this case - Publisher of Google Cloud Pub/Sub.
@@ -62,7 +68,7 @@ func createPublisher(ctx context.Context) (*publisher, error) {
 }
 
 // publishEvents which will produce some events for consuming.
-func publishEvents(ctx context.Context, publisher *publisher) {
+func (p *publisher) publishEvents(ctx context.Context) {
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
 
@@ -71,7 +77,14 @@ func publishEvents(ctx context.Context, publisher *publisher) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			publisher.Topic.Publish(ctx, &pubsub.Message{})
+			payload, _ := json.Marshal(
+				event{
+					CreatedAt: time.Now().UnixNano(),
+				},
+			)
+			p.Topic.Publish(ctx, &pubsub.Message{
+				Data: payload,
+			})
 		}
 	}
 }
@@ -85,7 +98,7 @@ func main() {
 	}
 
 	// producing events in background.
-	go publishEvents(ctx, publisher)
+	go publisher.publishEvents(ctx)
 
 	logger, _ := zap.NewProduction()
 
@@ -104,6 +117,17 @@ func main() {
 		func() subee.SingleMessageConsumer {
 			return subee.SingleMessageConsumerFunc(
 				func(ctx context.Context, msg subee.Message) error {
+					payload := event{}
+
+					err := json.Unmarshal(msg.Data(), &payload)
+					if err != nil {
+						return errors.Wrap(err, "faild to unmarshal message")
+					}
+
+					logger.Info("received event",
+						zap.Int64("created_at", payload.CreatedAt),
+					)
+
 					return nil
 				},
 			)
