@@ -3,29 +3,60 @@ package main
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/pkg/errors"
-
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/wantedly/subee"
-	"github.com/wantedly/subee/middlewares/logging/zap"
-	"github.com/wantedly/subee/middlewares/recovery"
-	"github.com/wantedly/subee/subscribers/cloudpubsub"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
+
+	"github.com/wantedly/subee"
+	"github.com/wantedly/subee/subscribers/cloudpubsub"
 )
 
-const (
-	// ProjectID is Google Cloud project id for example.
-	projectID = "your-first-cloudpub-app"
+func main() {
+	ctx := context.Background()
 
-	// topicID is Pub/Sub topic id for example.
-	topicID = "pub-sub-topic"
+	publisher, err := createPublisher(ctx)
+	if err != nil {
+		panic(err)
+	}
 
-	// SubscriptionID is Pub/Sub subscription id for example
-	subscriptionID = "subscription-id"
-)
+	// producing events in background.
+	go publisher.publishEvents(ctx)
+
+	// creates subscriber, in this case - Subscriber of Google Cloud Pub/Sub.
+	subscriber, err := cloudpubsub.CreateSubscriber(ctx, "your-first-cloudpub-app", "subscription-id")
+	if err != nil {
+		panic(err)
+	}
+
+	logger, _ := zap.NewProduction()
+
+	engine := subee.NewWithSingleMessageConsumer(
+		// Set Subscriber implementation.
+		subscriber,
+		// Set SingleMessageConsumer implementation.
+		// If engine is created with a constructor for single message consumer type, you have to add SingleMessageConsumer implementation.
+		subee.SingleMessageConsumerFunc(
+			func(ctx context.Context, msg subee.Message) error {
+				payload := event{}
+
+				json.Unmarshal(msg.Data(), &payload)
+
+				logger.Info("Received event",
+					zap.Int64("created_at", payload.CreatedAt),
+				)
+
+				return nil
+			},
+		),
+	)
+
+	err = engine.Start(ctx)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // publisher represents publisher structor of Google Cloud Pub/Sub.
 type publisher struct {
@@ -39,17 +70,17 @@ type event struct {
 
 // createPublisher is a helper function which creates Publisher, in this case - Publisher of Google Cloud Pub/Sub.
 func createPublisher(ctx context.Context) (*publisher, error) {
-	client, err := pubsub.NewClient(ctx, projectID)
+	client, err := pubsub.NewClient(ctx, "your-first-cloudpub-app")
 	if err != nil {
 		return nil, errors.Wrap(err, "faild to create pub/sub client")
 	}
 
-	topic := client.Topic(topicID)
+	topic := client.Topic("pub-sub-topic")
 	if ok, _ := topic.Exists(ctx); !ok {
-		client.CreateTopic(ctx, topicID)
+		client.CreateTopic(ctx, "pub-sub-topic")
 	}
 
-	subscription := client.Subscription(subscriptionID)
+	subscription := client.Subscription("subscription-id")
 	if ok, _ := subscription.Exists(ctx); ok {
 		// Since example is for testing, subscription is deleted if it exists, but it is not necessary to delete it in the production environment.
 		subscription.Delete(ctx)
@@ -57,7 +88,7 @@ func createPublisher(ctx context.Context) (*publisher, error) {
 
 	client.CreateSubscription(
 		ctx,
-		subscriptionID,
+		"subscription-id",
 		pubsub.SubscriptionConfig{
 			Topic: topic,
 		},
@@ -87,70 +118,5 @@ func (p *publisher) publishEvents(ctx context.Context) {
 				Data: payload,
 			})
 		}
-	}
-}
-
-func main() {
-	ctx := context.Background()
-
-	publisher, err := createPublisher(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	// producing events in background.
-	go publisher.publishEvents(ctx)
-
-	logger, _ := zap.NewProduction()
-
-	engine := subee.NewWithSingleMessageConsumer(
-		// Set Subscriber implementation, in this case - Subscriber of Google Cloud Pub/Sub.
-		func() subee.Subscriber {
-			// Create a subscriber of Google Cloud Pub/Sub with Google Cloud project id and subscribtion id.
-			s, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
-			if err != nil {
-				panic(err)
-			}
-			return s
-		}(),
-		// Set SingleMessageConsumer implementation.
-		// If engine is created with a constructor for single message consumer type, you have to add SingleMessageConsumer implementation.
-		func() subee.SingleMessageConsumer {
-			return subee.SingleMessageConsumerFunc(
-				func(ctx context.Context, msg subee.Message) error {
-					payload := event{}
-
-					json.Unmarshal(msg.Data(), &payload)
-
-					logger.Info("Received event",
-						zap.Int64("created_at", payload.CreatedAt),
-					)
-
-					return nil
-				},
-			)
-		}(),
-		// Set interceptor(s) option.
-		subee.WithSingleMessageConsumerInterceptors(
-			// Receive instant notification of panics in your Go applications.
-			subee_recovery.SingleMessageConsumerInterceptor(
-				func(ctx context.Context, p interface{}) {
-					logger.Warn("Recovery from panic",
-						zap.Any("panic", p),
-					)
-				},
-			),
-			// Log the consume handler with zap logging libray.
-			subee_zap.SingleMessageConsumerInterceptor(logger),
-		),
-		// Set logger option.
-		subee.WithLogger(zap.NewStdLog(logger)),
-		// Set immediate ack option.
-		subee.WithAckImmediately(),
-	)
-
-	err = engine.Start(ctx)
-	if err != nil {
-		panic(err)
 	}
 }
