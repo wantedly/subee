@@ -23,6 +23,7 @@ const (
 	// topicID is Pub/Sub topic id for example.
 	topicID = "pub-sub-test"
 
+	// SubscriptionID is Pub/Sub subscription id for example
 	subscriptionID = "sub-1"
 )
 
