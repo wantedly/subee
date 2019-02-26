@@ -6,13 +6,14 @@ services:
       - googlecloud-pubsub
     volumes:
       - .:/app
-       - $GOPATH/pkg/mod:/go/pkg/mod
+    working_dir: /app
+    environment:
+      - PUBSUB_EMULATOR_HOST=googlecloud-pubsub:8085
+      - GO111MODULE=on
     command: /bin/bash -c "go mod download && go run main.go"
 
   googlecloud-pubsub:
     image: google/cloud-sdk:235.0.0
     ports:
       - "8085:8085"
-    enviroment:
-      PUBSUB_EMULATOR_HOST=localhost:8085
     command: /bin/bash -c "gcloud config set project emulator && gcloud beta emulators pubsub start --host-port=0.0.0.0:8085"
