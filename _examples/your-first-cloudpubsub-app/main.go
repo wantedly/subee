@@ -60,7 +60,7 @@ func createPublisher(ctx context.Context) (*publisher, error) {
 	}, nil
 }
 
-// publishEvents which will produce some events with async for consuming.
+// publishEvents which will produce some events for consuming.
 func publishEvents(ctx context.Context, publisher *publisher) {
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
@@ -86,15 +86,20 @@ func main() {
 	// producing events in background.
 	go publishEvents(ctx, publisher)
 
+	logger, _ := zap.NewProduction()
+
 	engine := subee.NewWithSingleMessageConsumer(
-		// Subscriber is created with subscriptionID.
+		// Set Subscriber implementation, in this case - Subscriber of Google Cloud Pub/Sub.
 		func() subee.Subscriber {
+			// Create a subscriber of Google Cloud Pub/Sub with Google Cloud project id and subscribtion id.
 			s, err := cloudpubsub.CreateSubscriber(ctx, projectID, subscriptionID)
 			if err != nil {
 				panic(err)
 			}
 			return s
 		}(),
+		// Set SingleMessageConsumer implementation.
+		// If engine is created with a constructor for single message consumer type, you have to add SingleMessageConsumer implementation.
 		func() subee.SingleMessageConsumer {
 			return subee.SingleMessageConsumerFunc(
 				func(ctx context.Context, msg subee.Message) error {
@@ -102,23 +107,20 @@ func main() {
 				},
 			)
 		}(),
+		// Set interceptor(s) option.
 		subee.WithSingleMessageConsumerInterceptors(
+			// Receive instant notification of panics in your Go applications.
 			subee_recovery.SingleMessageConsumerInterceptor(
 				func(ctx context.Context, p interface{}) {
-					log.Println(p)
+					log.Printf("panic recovery: %v", p)
 				},
 			),
-			subee_zap.SingleMessageConsumerInterceptor(
-				func() *zap.Logger {
-					logger, err := zap.NewProduction()
-					if err != nil {
-						panic(err)
-					}
-					return logger
-				}(),
-			),
+			// Log the consume handler with zap logging libray.
+			subee_zap.SingleMessageConsumerInterceptor(logger),
 		),
-		subee.WithLogger(nil),
+		// Set logger option.
+		subee.WithLogger(zap.NewStdLog(logger)),
+		// Set immediate ack option.
 		subee.WithAckImmediately(),
 	)
 
