@@ -21,10 +21,10 @@ const (
 	projectID = "your-first-cloudpub-app"
 
 	// topicID is Pub/Sub topic id for example.
-	topicID = "pub-sub-test"
+	topicID = "pub-sub-topic"
 
 	// SubscriptionID is Pub/Sub subscription id for example
-	subscriptionID = "sub-1"
+	subscriptionID = "subscription-id"
 )
 
 // publisher represents publisher structor of Google Cloud Pub/Sub.
