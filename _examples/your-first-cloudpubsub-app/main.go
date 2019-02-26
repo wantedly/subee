@@ -121,7 +121,7 @@ func main() {
 
 					json.Unmarshal(msg.Data(), &payload)
 
-					logger.Info("received event",
+					logger.Info("Received event",
 						zap.Int64("created_at", payload.CreatedAt),
 					)
 
@@ -134,7 +134,7 @@ func main() {
 			// Receive instant notification of panics in your Go applications.
 			subee_recovery.SingleMessageConsumerInterceptor(
 				func(ctx context.Context, p interface{}) {
-					logger.Warn("Recover from panic",
+					logger.Warn("Recovery from panic",
 						zap.Any("panic", p),
 					)
 				},
