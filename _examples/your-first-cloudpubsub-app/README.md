@@ -4,8 +4,10 @@
 
 - [main.go](main.go) - example source code
 - [docker-compose.yml](docker-compose.yml) - tool for defining and running multi container Docker applications, contains Golang, Google Cloud Pub/Sub Emulator
-- [go.mod](go.mod) - Go modules dependencies, [Go wiki](https://github.com/golang/go/wiki/Modules)
+- [go.mod](go.mod) - Go modules dependencies
 - [go.sum](go.sum) - Go modules checksums
+
+you can find more information about go.mod and go.sumat [Go wiki](https://github.com/golang/go/wiki/Modules)
 
 ## Requirements
 
@@ -15,7 +17,7 @@ See installation guide at https://docs.docker.com/compose/install/
 
 ## Running
 
-`bash
+```bash
 > docker-compose up
 [a lot of Cloud Pub/Sub logs...]
 golang_1              | {"level":"info","ts":1551161785.525428,"caller":"subee@v0.1.0/engine.go:46","msg":"Start Pub/Sub worker"}
