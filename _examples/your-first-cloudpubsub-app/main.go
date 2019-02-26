@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"os"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -29,6 +31,8 @@ func main() {
 		panic(err)
 	}
 
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+
 	engine := subee.NewWithSingleMessageConsumer(
 		// Set Subscriber implementation.
 		subscriber,
@@ -40,7 +44,6 @@ func main() {
 
 				json.Unmarshal(msg.Data(), &payload)
 
-				logger := subee.GetLogger(ctx)
 				logger.Printf("Received event. created_at: %d", payload.CreatedAt)
 
 				return nil
