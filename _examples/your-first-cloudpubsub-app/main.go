@@ -44,7 +44,7 @@ func main() {
 
 				json.Unmarshal(msg.Data(), &payload)
 
-				logger.Printf("Received event. created_at: %d", payload.CreatedAt)
+				logger.Printf("Received event, created_at: %d", payload.CreatedAt)
 
 				return nil
 			},

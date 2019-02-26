@@ -7,7 +7,7 @@
 - [go.mod](go.mod) - Go modules dependencies
 - [go.sum](go.sum) - Go modules checksums
 
-you can find more information about go.mod and go.sumat [Go wiki](https://github.com/golang/go/wiki/Modules)
+You can find more information about `go.mod` and `go.sum` at [Go wiki](https://github.com/golang/go/wiki/Modules)
 
 ## Requirements
 
@@ -18,8 +18,12 @@ To run this example you will need Docker and docker-compose installed. See insta
 ```bash
 > docker-compose up
 [a lot of Cloud Pub/Sub logs...]
-golang_1     | {"level":"info","ts":1551161785.525428,"caller":"subee@v0.1.0/engine.go:46","msg":"Start Pub/Sub worker"}
-golang_1     | {"level":"info","ts":1551161785.5255408,"caller":"subee@v0.1.0/engine.go:126","msg":"Start consume process"}
-golang_1     | {"level":"info","ts":1551161786.584311,"caller":"app/main.go:124","msg":"Received event","created_at":1551161786513040831}
-golang_1     | {"level":"info","ts":1551161787.5468953,"caller":"app/main.go:124","msg":"Received event","created_at":1551161787512175761}
+golang_1     | 2019/02/26 07:56:39 Start Pub/Sub worker
+golang_1     | 2019/02/26 07:56:39 Start consume process
+golang_1     | 2019/02/26 07:56:40 Received event, created_at: 1551167800870017994
+golang_1     | 2019/02/26 07:56:41 Received event, created_at: 1551167801870989467
+golang_1     | 2019/02/26 07:56:42 Received event, created_at: 1551167802869335604
+golang_1     | 2019/02/26 07:56:43 Received event, created_at: 1551167803872802935
+golang_1     | 2019/02/26 07:56:44 Received event, created_at: 1551167804871915174
+golang_1     | 2019/02/26 07:56:45 Received event, created_at: 1551167805870712427
 ```
