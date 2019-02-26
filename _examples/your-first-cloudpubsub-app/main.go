@@ -28,7 +28,7 @@ const (
 	subscriptionID = "sub-1"
 )
 
-// publisher represents publisher of Google Cloud Pub/Sub
+// publisher represents publisher structor of Google Cloud Pub/Sub.
 type publisher struct {
 	*pubsub.Topic
 }
