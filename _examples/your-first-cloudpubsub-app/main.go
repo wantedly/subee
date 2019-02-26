@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"github.com/pkg/errors"
 
@@ -138,7 +137,9 @@ func main() {
 			// Receive instant notification of panics in your Go applications.
 			subee_recovery.SingleMessageConsumerInterceptor(
 				func(ctx context.Context, p interface{}) {
-					log.Printf("panic recovery: %v", p)
+					logger.Warn("Recover from panic",
+						zap.Any("panic", p),
+					)
 				},
 			),
 			// Log the consume handler with zap logging libray.
