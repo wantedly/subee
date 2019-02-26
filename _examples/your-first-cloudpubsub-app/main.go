@@ -7,7 +7,6 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 
 	"github.com/wantedly/subee"
 	"github.com/wantedly/subee/subscribers/cloudpubsub"
@@ -30,8 +29,6 @@ func main() {
 		panic(err)
 	}
 
-	logger, _ := zap.NewProduction()
-
 	engine := subee.NewWithSingleMessageConsumer(
 		// Set Subscriber implementation.
 		subscriber,
@@ -43,9 +40,8 @@ func main() {
 
 				json.Unmarshal(msg.Data(), &payload)
 
-				logger.Info("Received event",
-					zap.Int64("created_at", payload.CreatedAt),
-				)
+				logger := subee.GetLogger(ctx)
+				logger.Printf("Received event. created_at: %d", payload.CreatedAt)
 
 				return nil
 			},
