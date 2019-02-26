@@ -51,6 +51,7 @@ func createPublisher(ctx context.Context) (*publisher, error) {
 
 	subscription := client.Subscription(subscriptionID)
 	if ok, _ := subscription.Exists(ctx); ok {
+		// Since example is for testing, subscription is deleted if it exists, but it is not necessary to delete it in the production environment.
 		subscription.Delete(ctx)
 	}
 
