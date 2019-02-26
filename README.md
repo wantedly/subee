@@ -6,5 +6,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/wantedly/subee)](https://goreportcard.com/report/github.com/wantedly/subee)
 [![license](https://img.shields.io/github/license/wantedly/subee.svg)](./LICENSE)
 
-## Example
-* [Your first Google Cloud Pub/sub app](_examples/your-first-cloudpubsub-app/) - start here!
+## Examples
+- [Your first Google Cloud Pub/sub app](_examples/your-first-cloudpubsub-app/) - start here!
