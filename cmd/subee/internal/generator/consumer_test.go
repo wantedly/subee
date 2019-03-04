@@ -75,7 +75,6 @@ func TestConsumerGenerator(t *testing.T) {
 				}
 				t.Run(name, func(t *testing.T) {
 					tc := tc
-					t.Parallel()
 					packagestest.TestAll(t, func(t *testing.T, exporter packagestest.Exporter) {
 						exported := packagestest.Export(t, exporter, mods)
 						defer exported.Cleanup()
