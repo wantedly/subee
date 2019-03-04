@@ -26,9 +26,9 @@ type Config struct {
 
 	StatsHandler StatsHandler
 
-	MultiMessagesConsumer MultiMessagesConsumer
+	BatchConsumer BatchConsumer
 
-	SingleMessageConsumer SingleMessageConsumer
+	Consumer Consumer
 }
 
 func (c *Config) apply(opts []Option) {

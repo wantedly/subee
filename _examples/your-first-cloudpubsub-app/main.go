@@ -33,12 +33,12 @@ func main() {
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	engine := subee.NewWithSingleMessageConsumer(
+	engine := subee.New(
 		// Set Subscriber implementation.
 		subscriber,
-		// Set SingleMessageConsumer implementation.
-		// If engine is created with a constructor for single message consumer type, you have to add SingleMessageConsumer implementation.
-		subee.SingleMessageConsumerFunc(
+		// Set Consumer implementation.
+		// If engine is created with a constructor for single message consumer type, you have to add Consumer implementation.
+		subee.ConsumerFunc(
 			func(ctx context.Context, msg subee.Message) error {
 				payload := event{}
 
