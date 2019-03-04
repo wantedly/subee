@@ -92,9 +92,6 @@ github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e/go.mod
 github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1w=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
-github.com/wantedly/subee v0.1.0/go.mod h1:8mUK2zKjGb11OF+EExxays28gXZl5tNXX4jKuN/W7hc=
-github.com/wantedly/subee/_examples/your-first-cloudpubsub-app v0.0.0-20190226094823-0c63e2a2535c h1:mW1drwn+lNm+xQOMroNaRnHAUBGNGrOCs9VicdnAFGs=
-github.com/wantedly/subee/_examples/your-first-cloudpubsub-app v0.0.0-20190226094823-0c63e2a2535c/go.mod h1:8x0r9Ysa0DF+Y4ukBl1OE4iLXKCioPebWhbGFag+9eo=
 go.opencensus.io v0.18.0 h1:Mk5rgZcggtbvtAun5aJzAtjKKN/t0R3jJPlWILlv938=
 go.opencensus.io v0.18.0/go.mod h1:vKdFvxhtzZ9onBp9VKHK8z/sRpBMnKAsufL7wlDrCOA=
 go.uber.org/atomic v1.3.2 h1:2Oa65PReHzfn29GpvgsYwloV9AVFHPDk8tYxt2c2tr4=
