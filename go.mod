@@ -2,6 +2,7 @@ module github.com/wantedly/subee
 
 require (
 	cloud.google.com/go v0.36.0
+	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
 	github.com/google/go-cmp v0.2.0
 	github.com/iancoleman/strcase v0.0.0-20180726023541-3605ed457bf7
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect

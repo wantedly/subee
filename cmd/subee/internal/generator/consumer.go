@@ -20,21 +20,28 @@ type ConsumerGenerator interface {
 	Generate(context.Context, *ConsumerParams) error
 }
 
-func NewConsumerGenerator() ConsumerGenerator {
-	return &consumerGeneratorImpl{}
+func NewConsumerGenerator(
+	pkgCfg *packages.Config,
+) ConsumerGenerator {
+	return &consumerGeneratorImpl{
+		pkgCfg: pkgCfg,
+	}
 }
 
 type consumerGeneratorImpl struct {
+	pkgCfg *packages.Config
 }
 
 func (g *consumerGeneratorImpl) Generate(ctx context.Context, params *ConsumerParams) error {
 	if err := params.Validate(); err != nil {
 		return errors.WithStack(err)
 	}
+	if g.pkgCfg.Mode < packages.LoadTypes {
+		return errors.Errorf("invalid packages.LoadMode: %v", g.pkgCfg.Mode)
+	}
 
 	if params.IsWithAdapter() {
-		cfg := &packages.Config{Context: ctx, Mode: packages.LoadTypes}
-		pkgs, err := packages.Load(cfg, params.Package.Path)
+		pkgs, err := packages.Load(g.pkgCfg, params.Package.Path)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -50,27 +57,35 @@ func (g *consumerGeneratorImpl) Generate(ctx context.Context, params *ConsumerPa
 			break
 		}
 		params.Package.Path = obj.Pkg().Path()
-		params.Imports = append(params.Imports, params.Package)
+		params.Package.Name = obj.Pkg().Name()
+		if filepath.Base(params.Package.Path) == params.Package.Name {
+			params.Imports = append(params.Imports, Package{Path: params.Package.Path})
+		} else {
+			params.Imports = append(params.Imports, params.Package)
+		}
+		if params.Encoding == MessageEncodingProtobuf {
+			params.Imports = append(params.Imports, Package{Path: "github.com/golang/protobuf/proto"})
+		}
 	}
 
-	err := writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer.go"), params, consumerTmpl)
+	err := g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer.go"), params, consumerTmpl)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	if params.IsWithAdapter() {
-		err = writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer_adapter.go"), params, adapterTmpl)
+		err = g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer_adapter.go"), params, adapterTmpl)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	err = writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "run.go"), params, runTmpl)
+	err = g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "run.go"), params, runTmpl)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	err = writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "main.go"), params, mainTmpl)
+	err = g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "main.go"), params, mainTmpl)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -82,12 +97,13 @@ func mustCreateTemplate(name, text string) *template.Template {
 	return template.Must(template.New(name).Funcs(tmplFuncs).Parse(text))
 }
 
-func writeFile(path string, params interface{}, tmpl *template.Template) error {
+func (g *consumerGeneratorImpl) writeFile(path string, params interface{}, tmpl *template.Template) error {
 	buf := new(bytes.Buffer)
 	err := tmpl.Execute(buf, params)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	path = filepath.Join(g.pkgCfg.Dir, path)
 	data, err := imports.Process(path, buf.Bytes(), nil)
 	if err != nil {
 		return errors.WithStack(err)
@@ -98,8 +114,6 @@ func writeFile(path string, params interface{}, tmpl *template.Template) error {
 			return errors.WithStack(err)
 		}
 	}
-	// fmt.Println(path)
-	// fmt.Println(string(data))
 	err = ioutil.WriteFile(path, data, 0644)
 	if err != nil {
 		return errors.WithStack(err)
@@ -184,7 +198,7 @@ type {{.Name|ToCamel}}Consumer subee.SingleMessageConsumer
 
 // New{{.Name|ToCamel}}Consumer creates a new consumer instance.
 func New{{.Name|ToCamel}}Consumer() {{.Name|ToCamel}}Consumer {
-	return &{{.Name|ToCamel}}ConsumerImpl{}
+	return &{{.Name|ToLowerCamel}}ConsumerImpl{}
 }
 
 type {{.Name|ToLowerCamel}}ConsumerImpl struct {}
@@ -222,7 +236,7 @@ import (
 
 // New{{.Name|ToCamel}}ConsumerAdapter created a consumer-adapter instance that converts incoming messages into {{.Package.Name}}.{{.Message}}.
 func New{{.Name|ToCamel}}ConsumerAdapter(consumer {{.Name|ToCamel}}Consumer) subee.SingleMessageConsumer {
-	return &{{.Name|ToCamel}}ConsumerAdapterImpl{consumer: consumer}
+	return &{{.Name|ToLowerCamel}}ConsumerAdapterImpl{consumer: consumer}
 }
 
 type {{.Name|ToLowerCamel}}ConsumerAdapterImpl struct {

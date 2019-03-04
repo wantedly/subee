@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/tools/go/packages"
 
 	"github.com/wantedly/subee/cmd/subee/internal/generator"
 )
@@ -31,7 +33,12 @@ func newGenerateConsumerCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params.Name = args[0]
-			err := generator.NewConsumerGenerator().Generate(context.Background(), &params)
+			wd, err := os.Getwd()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			cfg := packages.Config{Mode: packages.LoadTypes, Dir: wd}
+			err = generator.NewConsumerGenerator(&cfg).Generate(context.Background(), &params)
 			return errors.WithStack(err)
 		},
 	}
