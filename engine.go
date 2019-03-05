@@ -17,20 +17,20 @@ type Engine struct {
 	subscriber Subscriber
 }
 
-// NewWithSingleMessageConsumer creates a Engine intstance with SingleMessageConsumer.
-func NewWithSingleMessageConsumer(subscriber Subscriber, consumer SingleMessageConsumer, opts ...Option) *Engine {
+// New creates a Engine intstance with Consumer.
+func New(subscriber Subscriber, consumer Consumer, opts ...Option) *Engine {
 	return newEngine(subscriber, nil, consumer, opts...)
 }
 
-// NewWithMultiMessagesConsumer creates a Engine intstance with MultiMessagesConsumer.
-func NewWithMultiMessagesConsumer(subscriber Subscriber, consumer MultiMessagesConsumer, opts ...Option) *Engine {
+// NewBatch creates a Engine intstance with BatchConsumer.
+func NewBatch(subscriber Subscriber, consumer BatchConsumer, opts ...Option) *Engine {
 	return newEngine(subscriber, consumer, nil, opts...)
 }
 
-func newEngine(subscriber Subscriber, mConsumer MultiMessagesConsumer, sConsumer SingleMessageConsumer, opts ...Option) *Engine {
+func newEngine(subscriber Subscriber, bConsumer BatchConsumer, consumer Consumer, opts ...Option) *Engine {
 	cfg := newDefaultConfig()
-	cfg.MultiMessagesConsumer = mConsumer
-	cfg.SingleMessageConsumer = sConsumer
+	cfg.BatchConsumer = bConsumer
+	cfg.Consumer = consumer
 	cfg.apply(opts)
 
 	e := &Engine{
@@ -61,13 +61,13 @@ func (e *Engine) Start(ctx context.Context) error {
 		outCh <-chan queuedMessage
 	)
 
-	if e.SingleMessageConsumer != nil {
+	if e.Consumer != nil {
 		inCh, outCh = createQueue(
 			queuingContext(e.StatsHandler),
 		)
 	}
 
-	if e.MultiMessagesConsumer != nil {
+	if e.BatchConsumer != nil {
 		inCh, outCh = createBufferedQueue(
 			queuingContext(e.StatsHandler),
 			e.ChunkSize,
@@ -115,11 +115,11 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 
 func (e *Engine) consume(qm queuedMessage) error {
 	if m, ok := qm.(*singleMessage); ok {
-		return errors.WithStack(e.SingleMessageConsumer.Consume(m.Ctx, m.Msg))
+		return errors.WithStack(e.Consumer.Consume(m.Ctx, m.Msg))
 	}
 
 	m := qm.(*multiMessages)
-	return errors.WithStack(e.MultiMessagesConsumer.Consume(m.Ctx, m.Msgs))
+	return errors.WithStack(e.BatchConsumer.BatchConsume(m.Ctx, m.Msgs))
 }
 
 func (e *Engine) handle(msgCh <-chan queuedMessage) error {

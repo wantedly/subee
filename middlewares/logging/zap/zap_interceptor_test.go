@@ -30,7 +30,7 @@ func dummySince() func(t time.Time) time.Duration {
 	}
 }
 
-func TestSingleMessageConsumerInterceptor(t *testing.T) {
+func TestConsumerInterceptor(t *testing.T) {
 	since = dummySince()
 
 	defer func() {
@@ -47,8 +47,8 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 {"level":"INFO","msg":"End consume message.","message_count":1,"time":"0s"}
 `
 
-	SingleMessageConsumerInterceptor(logger)(
-		subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+	ConsumerInterceptor(logger)(
+		subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
 			logger.Info("called single message consumer func")
 			return nil
 		}),
@@ -62,7 +62,7 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 	}
 }
 
-func TestMultiMessagesConsumerInterceptor(t *testing.T) {
+func TestBatchConsumerInterceptor(t *testing.T) {
 	since = dummySince()
 
 	defer func() {
@@ -79,12 +79,12 @@ func TestMultiMessagesConsumerInterceptor(t *testing.T) {
 {"level":"INFO","msg":"End consume message.","message_count":2,"time":"0s"}
 `
 
-	MultiMessagesConsumerInterceptor(logger)(
-		subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
+	BatchConsumerInterceptor(logger)(
+		subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
 			logger.Info("called single message consumer func")
 			return nil
 		}),
-	).Consume(
+	).BatchConsume(
 		context.Background(),
 		[]subee.Message{
 			message_testing.NewFakeMessage(nil, false, false),

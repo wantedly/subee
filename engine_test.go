@@ -14,7 +14,7 @@ import (
 	subee_testing "github.com/wantedly/subee/testing"
 )
 
-func TestEngineWithSingleMessageConsumer(t *testing.T) {
+func TestEngine(t *testing.T) {
 	in := [][]byte{
 		[]byte("foo"),
 		[]byte("error!!"),
@@ -50,7 +50,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 
 	var cur int
 	subscriber := subee_testing.NewFakeSubscriber()
-	consumer := subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+	consumer := subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
 		r := &Result{
 			tc:  cases[cur],
 			msg: msg.(*subee_testing.FakeMessage),
@@ -68,7 +68,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 		return nil
 	})
 
-	engine := subee.NewWithSingleMessageConsumer(
+	engine := subee.New(
 		subscriber,
 		consumer,
 		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
@@ -111,7 +111,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	}
 }
 
-func TestEngineWithMultiMessagesConsumer(t *testing.T) {
+func TestEngineWithBatchConsumer(t *testing.T) {
 	in := [][][]byte{
 		{
 			[]byte("foo"),
@@ -170,7 +170,7 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 
 	var cur int
 	subscriber := subee_testing.NewFakeSubscriber()
-	consumer := subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
+	consumer := subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
 		r := &Result{tc: cases[cur]}
 		for _, m := range msgs {
 			r.msgs = append(r.msgs, m.(*subee_testing.FakeMessage))
@@ -187,7 +187,7 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 		return nil
 	})
 
-	engine := subee.NewWithMultiMessagesConsumer(
+	engine := subee.NewBatch(
 		subscriber,
 		consumer,
 		subee.WithChunkSize(3),
