@@ -12,7 +12,7 @@ import (
 )
 
 // NewBookConsumerAdapter created a consumer-adapter instance that converts incoming messages into c.Book.
-func NewBookConsumerAdapter(consumer BookConsumer) subee.SingleMessageConsumer {
+func NewBookConsumerAdapter(consumer BookConsumer) subee.Consumer {
 	return &bookConsumerAdapterImpl{consumer: consumer}
 }
 

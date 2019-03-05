@@ -15,10 +15,10 @@ func run() error {
 		return errors.WithStack(err)
 	}
 
-	engine := subee.NewWithSingleMessageConsumer(
+	engine := subee.NewBatch(
 		subscriber,
-		consumer.NewAuthorConsumerAdapter(
-			consumer.NewAuthorConsumer(),
+		consumer.NewAuthorBatchConsumerAdapter(
+			consumer.NewAuthorBatchConsumer(),
 		),
 	)
 

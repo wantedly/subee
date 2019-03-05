@@ -12,7 +12,7 @@ import (
 )
 
 // NewAuthorConsumerAdapter created a consumer-adapter instance that converts incoming messages into e.Author.
-func NewAuthorConsumerAdapter(consumer AuthorConsumer) subee.SingleMessageConsumer {
+func NewAuthorConsumerAdapter(consumer AuthorConsumer) subee.Consumer {
 	return &authorConsumerAdapterImpl{consumer: consumer}
 }
 

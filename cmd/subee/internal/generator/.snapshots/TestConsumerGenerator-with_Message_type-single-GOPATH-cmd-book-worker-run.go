@@ -15,7 +15,7 @@ func run() error {
 		return errors.WithStack(err)
 	}
 
-	engine := subee.NewWithSingleMessageConsumer(
+	engine := subee.New(
 		subscriber,
 		consumer.NewBookConsumerAdapter(
 			consumer.NewBookConsumer(),

@@ -8,7 +8,7 @@ import (
 )
 
 // BookConsumer is a consumer interface.
-type BookConsumer subee.SingleMessageConsumer
+type BookConsumer subee.Consumer
 
 // NewBookConsumer creates a new consumer instance.
 func NewBookConsumer() BookConsumer {

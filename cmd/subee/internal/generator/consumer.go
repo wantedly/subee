@@ -68,19 +68,33 @@ func (g *consumerGeneratorImpl) Generate(ctx context.Context, params *ConsumerPa
 		}
 	}
 
-	err := g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer.go"), params, consumerTmpl)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if params.IsWithAdapter() {
-		err = g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer_adapter.go"), params, adapterTmpl)
+	if params.Batch {
+		err := g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_batch_consumer.go"), params, batchConsumerTmpl)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+
+		if params.IsWithAdapter() {
+			err = g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_batch_consumer_adapter.go"), params, batchAdapterTmpl)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+	} else {
+		err := g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer.go"), params, consumerTmpl)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		if params.IsWithAdapter() {
+			err = g.writeFile(filepath.Join("pkg", "consumer", strcase.ToSnake(params.Name)+"_consumer_adapter.go"), params, adapterTmpl)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
 	}
 
-	err = g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "run.go"), params, runTmpl)
+	err := g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "run.go"), params, runTmpl)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -150,9 +164,19 @@ func run() error {
 		return errors.WithStack(err)
 	}
 
-	engine := subee.NewWithSingleMessageConsumer(
+	{{if .Batch}}
+	engine := subee.NewBatch(
+	{{- else}}
+	engine := subee.New(
+	{{- end}}
 		subscriber,
-		{{- if .IsWithAdapter}}
+		{{- if and .Batch .IsWithAdapter}}
+		consumer.New{{.Name|ToCamel}}BatchConsumerAdapter(
+			consumer.New{{.Name|ToCamel}}BatchConsumer(),
+		),
+		{{- else if .Batch}}
+		consumer.New{{.Name|ToCamel}}BatchConsumer(),
+		{{- else if .IsWithAdapter}}
 		consumer.New{{.Name|ToCamel}}ConsumerAdapter(
 			consumer.New{{.Name|ToCamel}}Consumer(),
 		),
@@ -185,15 +209,11 @@ import (
 {{- if .IsWithAdapter}}
 // {{.Name|ToCamel}}Consumer is a consumer interface for {{.Package.Name}}.{{.Message}}.
 type {{.Name|ToCamel}}Consumer interface {
-	{{- if .Batch}}
-	Consume(context.Context, []*{{.Package.Name}}.{{.Message}}) error
-	{{- else}}
 	Consume(context.Context, *{{.Package.Name}}.{{.Message}}) error
-	{{- end}}
 }
 {{- else}}
 // {{.Name|ToCamel}}Consumer is a consumer interface.
-type {{.Name|ToCamel}}Consumer subee.SingleMessageConsumer
+type {{.Name|ToCamel}}Consumer subee.Consumer
 {{- end}}
 
 // New{{.Name|ToCamel}}Consumer creates a new consumer instance.
@@ -203,20 +223,50 @@ func New{{.Name|ToCamel}}Consumer() {{.Name|ToCamel}}Consumer {
 
 type {{.Name|ToLowerCamel}}ConsumerImpl struct {}
 
-{{- if .Batch}}
-{{- if .IsWithAdapter}}
-func (c *{{.Name|ToLowerCamel}}ConsumerImpl) Consume(ctx context.Context, msgs []*{{.Package.Name}}.{{.Message}}) error {
-{{- else}}
-func (c *{{.Name|ToLowerCamel}}ConsumerImpl) Consume(ctx context.Context, msgs []subee.Message) error {
-{{- end}}
-{{- else}}
 {{- if .IsWithAdapter}}
 func (c *{{.Name|ToLowerCamel}}ConsumerImpl) Consume(ctx context.Context, msg *{{.Package.Name}}.{{.Message}}) error {
 {{- else}}
 func (c *{{.Name|ToLowerCamel}}ConsumerImpl) Consume(ctx context.Context, msg subee.Message) error {
 {{- end}}
-{{- end}}
 	return errors.New("Consume() has not been implemented yet")
+}`)
+
+	batchConsumerTmpl = mustCreateTemplate("pkg/consumer/{{.Name}}_batch_consumer.go",
+		`package consumer
+
+import (
+{{- range .Imports}}
+	{{- if .Name}}
+		{{.Name}} "{{.Path}}"
+	{{- else}}
+		"{{.Path}}"
+	{{- end}}
+{{- end}}
+)
+
+{{- if .IsWithAdapter}}
+// {{.Name|ToCamel}}BatchConsumer is a batch consumer interface for {{.Package.Name}}.{{.Message}}.
+type {{.Name|ToCamel}}BatchConsumer interface {
+	BatchConsume(context.Context, []*{{.Package.Name}}.{{.Message}}) error
+}
+{{- else}}
+// {{.Name|ToCamel}}BatchConsumer is a consumer interface.
+type {{.Name|ToCamel}}BatchConsumer subee.BatchConsumer
+{{- end}}
+
+// New{{.Name|ToCamel}}BatchConsumer creates a new consumer instance.
+func New{{.Name|ToCamel}}BatchConsumer() {{.Name|ToCamel}}BatchConsumer {
+	return &{{.Name|ToLowerCamel}}BatchConsumerImpl{}
+}
+
+type {{.Name|ToLowerCamel}}BatchConsumerImpl struct {}
+
+{{- if .IsWithAdapter}}
+func (c *{{.Name|ToLowerCamel}}BatchConsumerImpl) BatchConsume(ctx context.Context, msgs []*{{.Package.Name}}.{{.Message}}) error {
+{{- else}}
+func (c *{{.Name|ToLowerCamel}}BatchConsumerImpl) BatchConsume(ctx context.Context, msgs []subee.Message) error {
+{{- end}}
+	return errors.New("BatchConsume() has not been implemented yet")
 }`)
 
 	adapterTmpl = mustCreateTemplate("pkg/consumer/{{.Name}}_consumer_adapter.go",
@@ -235,7 +285,7 @@ import (
 )
 
 // New{{.Name|ToCamel}}ConsumerAdapter created a consumer-adapter instance that converts incoming messages into {{.Package.Name}}.{{.Message}}.
-func New{{.Name|ToCamel}}ConsumerAdapter(consumer {{.Name|ToCamel}}Consumer) subee.SingleMessageConsumer {
+func New{{.Name|ToCamel}}ConsumerAdapter(consumer {{.Name|ToCamel}}Consumer) subee.Consumer {
 	return &{{.Name|ToLowerCamel}}ConsumerAdapterImpl{consumer: consumer}
 }
 
@@ -243,29 +293,6 @@ type {{.Name|ToLowerCamel}}ConsumerAdapterImpl struct {
 	consumer {{.Name|ToCamel}}Consumer
 }
 
-{{- if .Batch}}
-func (a *{{.Name|ToLowerCamel}}ConsumerAdapterImpl) Consume(ctx context.Context, ms []subee.Message) error {
-	var err error
-	objs := make([]*{{.Package.Name}}.{{.Message}}, len(ms))
-	for i, m := range ms {
-		obj := new({{.Package.Name}}.{{.Message}})
-		{{- if .IsJSON}}
-		err = json.Unmarshal(m.Data(), obj)
-		{{- else if .IsProtobuf}}
-		err = proto.Unmarshal(m.Data(), obj)
-		{{- end}}
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		objs[i] = obj
-	}
-	err = a.consumer.Consume(ctx, objs)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-{{- else}}
 func (a *{{.Name|ToLowerCamel}}ConsumerAdapterImpl) Consume(ctx context.Context, m subee.Message) error {
 	var err error
 	obj := new({{.Package.Name}}.{{.Message}})
@@ -282,8 +309,53 @@ func (a *{{.Name|ToLowerCamel}}ConsumerAdapterImpl) Consume(ctx context.Context,
 		return errors.WithStack(err)
 	}
 	return nil
+}`)
+
+	batchAdapterTmpl = mustCreateTemplate("pkg/consumer/{{.Name}}_batch_consumer_adapter.go",
+		`// Code generated by github.com/wantedly/subee/cmd/subee. DO NOT EDIT.
+
+package consumer
+
+import (
+{{- range .Imports}}
+	{{- if .Name}}
+		{{.Name}} "{{.Path}}"
+	{{- else}}
+		"{{.Path}}"
+	{{- end}}
+{{- end}}
+)
+
+// New{{.Name|ToCamel}}BatchConsumerAdapter created a consumer-adapter instance that converts incoming messages into {{.Package.Name}}.{{.Message}}.
+func New{{.Name|ToCamel}}BatchConsumerAdapter(consumer {{.Name|ToCamel}}BatchConsumer) subee.BatchConsumer {
+	return &{{.Name|ToLowerCamel}}BatchConsumerAdapterImpl{consumer: consumer}
 }
-{{- end}}`)
+
+type {{.Name|ToLowerCamel}}BatchConsumerAdapterImpl struct {
+	consumer {{.Name|ToCamel}}BatchConsumer
+}
+
+func (a *{{.Name|ToLowerCamel}}BatchConsumerAdapterImpl) BatchConsume(ctx context.Context, ms []subee.Message) error {
+	var err error
+	objs := make([]*{{.Package.Name}}.{{.Message}}, len(ms))
+	for i, m := range ms {
+		obj := new({{.Package.Name}}.{{.Message}})
+		{{- if .IsJSON}}
+		err = json.Unmarshal(m.Data(), obj)
+		{{- else if .IsProtobuf}}
+		err = proto.Unmarshal(m.Data(), obj)
+		{{- end}}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		objs[i] = obj
+	}
+	err = a.consumer.BatchConsume(ctx, objs)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}`)
 )
 
 type ConsumerParams struct {
