@@ -10,7 +10,7 @@ type Option func(*Config)
 // e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => Consumer.Consume
 func WithConsumerInterceptors(interceptors ...ConsumerInterceptor) Option {
 	return func(c *Config) {
-		c.Consumer = chainConsumerInterceptors(c.Consumer, interceptors...)
+		c.ConsumerInterceptors = append(c.ConsumerInterceptors, interceptors...)
 	}
 }
 
@@ -19,30 +19,8 @@ func WithConsumerInterceptors(interceptors ...ConsumerInterceptor) Option {
 // e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => BatchConsumer.Consume
 func WithBatchConsumerInterceptors(interceptors ...BatchConsumerInterceptor) Option {
 	return func(c *Config) {
-		c.BatchConsumer = chainBatchConsumerInterceptors(c.BatchConsumer, interceptors...)
+		c.BatchConsumerInterceptors = append(c.BatchConsumerInterceptors, interceptors...)
 	}
-}
-
-func chainConsumerInterceptors(consumer Consumer, interceptors ...ConsumerInterceptor) Consumer {
-	if len(interceptors) == 0 {
-		return consumer
-	}
-
-	for i := len(interceptors) - 1; i >= 0; i-- {
-		consumer = interceptors[i](consumer)
-	}
-	return consumer
-}
-
-func chainBatchConsumerInterceptors(consumer BatchConsumer, interceptors ...BatchConsumerInterceptor) BatchConsumer {
-	if len(interceptors) == 0 {
-		return consumer
-	}
-
-	for i := len(interceptors) - 1; i >= 0; i-- {
-		consumer = interceptors[i](consumer)
-	}
-	return consumer
 }
 
 // WithLogger returns an Option that sets the Logger implementation.
