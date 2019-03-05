@@ -14,62 +14,62 @@ func writeBuffer(ctx context.Context, tag string) {
 	ctx.Value(chainContextTestKey{}).(*bytes.Buffer).Write([]byte(tag))
 }
 
-func tagMultiMessagesConsumerInterceptor(tag string) MultiMessagesConsumerInterceptor {
-	return func(consumer MultiMessagesConsumer) MultiMessagesConsumer {
-		return MultiMessagesConsumerFunc(func(ctx context.Context, msgs []Message) error {
+func tagBatchConsumerInterceptor(tag string) BatchConsumerInterceptor {
+	return func(consumer BatchConsumer) BatchConsumer {
+		return BatchConsumerFunc(func(ctx context.Context, msgs []Message) error {
 			writeBuffer(ctx, tag)
-			return errors.WithStack(consumer.Consume(ctx, msgs))
+			return errors.WithStack(consumer.BatchConsume(ctx, msgs))
 		})
 	}
 }
 
-func tagMultiMessagesConsumer(tag string) MultiMessagesConsumer {
-	return MultiMessagesConsumerFunc(func(ctx context.Context, msgs []Message) error {
+func tagBatchConsumer(tag string) BatchConsumer {
+	return BatchConsumerFunc(func(ctx context.Context, msgs []Message) error {
 		writeBuffer(ctx, tag)
 		return nil
 	})
 }
 
-func tagSingleMessageConsumerInterceptor(tag string) SingleMessageConsumerInterceptor {
-	return func(consumer SingleMessageConsumer) SingleMessageConsumer {
-		return SingleMessageConsumerFunc(func(ctx context.Context, msg Message) error {
+func tagConsumerInterceptor(tag string) ConsumerInterceptor {
+	return func(consumer Consumer) Consumer {
+		return ConsumerFunc(func(ctx context.Context, msg Message) error {
 			writeBuffer(ctx, tag)
 			return errors.WithStack(consumer.Consume(ctx, msg))
 		})
 	}
 }
 
-func tagSingleMessageConsumer(tag string) SingleMessageConsumer {
-	return SingleMessageConsumerFunc(func(ctx context.Context, msg Message) error {
+func tagConsumer(tag string) Consumer {
+	return ConsumerFunc(func(ctx context.Context, msg Message) error {
 		writeBuffer(ctx, tag)
 		return nil
 	})
 }
 
-func TestChainSingleMessageConsumerInterceptors(t *testing.T) {
+func TestChainConsumerInterceptors(t *testing.T) {
 	tests := []struct {
-		consumer     SingleMessageConsumer
-		interceptors []SingleMessageConsumerInterceptor
+		consumer     Consumer
+		interceptors []ConsumerInterceptor
 		want         string
 	}{
 		{
-			consumer: tagSingleMessageConsumer("consumer-A\n"),
-			interceptors: []SingleMessageConsumerInterceptor{
-				tagSingleMessageConsumerInterceptor("intr-A\n"),
-				tagSingleMessageConsumerInterceptor("intr-B\n"),
-				tagSingleMessageConsumerInterceptor("intr-C\n"),
+			consumer: tagConsumer("consumer-A\n"),
+			interceptors: []ConsumerInterceptor{
+				tagConsumerInterceptor("intr-A\n"),
+				tagConsumerInterceptor("intr-B\n"),
+				tagConsumerInterceptor("intr-C\n"),
 			},
 			want: "intr-A\nintr-B\nintr-C\nconsumer-A\n",
 		},
 		{
-			consumer:     tagSingleMessageConsumer("consumer-A\n"),
-			interceptors: []SingleMessageConsumerInterceptor{},
+			consumer:     tagConsumer("consumer-A\n"),
+			interceptors: []ConsumerInterceptor{},
 			want:         "consumer-A\n",
 		},
 	}
 
 	for _, test := range tests {
-		chain := chainSingleMessageConsumerInterceptors(test.consumer, test.interceptors...)
+		chain := chainConsumerInterceptors(test.consumer, test.interceptors...)
 
 		ctx := context.WithValue(context.Background(), chainContextTestKey{}, new(bytes.Buffer))
 		chain.Consume(ctx, nil)
@@ -77,43 +77,43 @@ func TestChainSingleMessageConsumerInterceptors(t *testing.T) {
 		got := ctx.Value(chainContextTestKey{}).(*bytes.Buffer).String()
 
 		if test.want != got {
-			t.Errorf("chainSingleMessageConsumerInterceptors output is wrong. want: %v, got: %v", test.want, got)
+			t.Errorf("chainConsumerInterceptors output is wrong. want: %v, got: %v", test.want, got)
 		}
 	}
 }
 
-func TestChainMultiMessagesConsumerInterceptors(t *testing.T) {
+func TestChainBatchConsumerInterceptors(t *testing.T) {
 	tests := []struct {
-		consumer     MultiMessagesConsumer
-		interceptors []MultiMessagesConsumerInterceptor
+		consumer     BatchConsumer
+		interceptors []BatchConsumerInterceptor
 		want         string
 	}{
 		{
-			consumer: tagMultiMessagesConsumer("consumer-A\n"),
-			interceptors: []MultiMessagesConsumerInterceptor{
-				tagMultiMessagesConsumerInterceptor("intr-A\n"),
-				tagMultiMessagesConsumerInterceptor("intr-B\n"),
-				tagMultiMessagesConsumerInterceptor("intr-C\n"),
+			consumer: tagBatchConsumer("consumer-A\n"),
+			interceptors: []BatchConsumerInterceptor{
+				tagBatchConsumerInterceptor("intr-A\n"),
+				tagBatchConsumerInterceptor("intr-B\n"),
+				tagBatchConsumerInterceptor("intr-C\n"),
 			},
 			want: "intr-A\nintr-B\nintr-C\nconsumer-A\n",
 		},
 		{
-			consumer:     tagMultiMessagesConsumer("consumer-A\n"),
-			interceptors: []MultiMessagesConsumerInterceptor{},
+			consumer:     tagBatchConsumer("consumer-A\n"),
+			interceptors: []BatchConsumerInterceptor{},
 			want:         "consumer-A\n",
 		},
 	}
 
 	for _, test := range tests {
-		chain := chainMultiMessagesConsumerInterceptors(test.consumer, test.interceptors...)
+		chain := chainBatchConsumerInterceptors(test.consumer, test.interceptors...)
 
 		ctx := context.WithValue(context.Background(), chainContextTestKey{}, new(bytes.Buffer))
-		chain.Consume(ctx, nil)
+		chain.BatchConsume(ctx, nil)
 
 		got := ctx.Value(chainContextTestKey{}).(*bytes.Buffer).String()
 
 		if test.want != got {
-			t.Errorf("chainMultiMessagesConsumerInterceptors output is wrong. want: %v, got: %v", test.want, got)
+			t.Errorf("chainBatchConsumerInterceptors output is wrong. want: %v, got: %v", test.want, got)
 		}
 	}
 }

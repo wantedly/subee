@@ -20,7 +20,7 @@ const (
 	topicID = "topic_id_for_subee_test"
 )
 
-func TestEngineWithSingleMessageConsumer(t *testing.T) {
+func TestEngineWithConsumer(t *testing.T) {
 	in := createInputData(256)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -39,12 +39,12 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 
 	var cnt int64
 
-	consumer := subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+	consumer := subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
 		atomic.AddInt64(&cnt, 1)
 		return nil
 	})
 
-	engine := subee.NewWithSingleMessageConsumer(
+	engine := subee.New(
 		subscriber,
 		consumer,
 		subee.WithLogger(log.New(ioutil.Discard, "", 0)),
@@ -67,7 +67,7 @@ func TestEngineWithSingleMessageConsumer(t *testing.T) {
 	}
 }
 
-func TestEngineWithMultiMessagesConsumer(t *testing.T) {
+func TestEngineWithBatchConsumer(t *testing.T) {
 	in := createInputData(256)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -86,12 +86,12 @@ func TestEngineWithMultiMessagesConsumer(t *testing.T) {
 
 	var cnt int64
 
-	consumer := subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
+	consumer := subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
 		atomic.AddInt64(&cnt, int64(len(msgs)))
 		return nil
 	})
 
-	engine := subee.NewWithMultiMessagesConsumer(
+	engine := subee.NewBatch(
 		subscriber,
 		consumer,
 		subee.WithChunkSize(3),

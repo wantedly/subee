@@ -15,10 +15,10 @@ var since = func(t time.Time) time.Duration {
 	return time.Since(t)
 }
 
-// SingleMessageConsumerInterceptor returns a new single message consumer interceptor for logging with zap.
-func SingleMessageConsumerInterceptor(logger *zap.Logger) subee.SingleMessageConsumerInterceptor {
-	return func(consumer subee.SingleMessageConsumer) subee.SingleMessageConsumer {
-		return subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+// ConsumerInterceptor returns a new single message consumer interceptor for logging with zap.
+func ConsumerInterceptor(logger *zap.Logger) subee.ConsumerInterceptor {
+	return func(consumer subee.Consumer) subee.Consumer {
+		return subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
 			msgCnt := 1
 
 			startConsume(logger, msgCnt)
@@ -34,15 +34,15 @@ func SingleMessageConsumerInterceptor(logger *zap.Logger) subee.SingleMessageCon
 	}
 }
 
-// MultiMessagesConsumerInterceptor returns a new multi messages consumer interceptor for logging with zap.
-func MultiMessagesConsumerInterceptor(logger *zap.Logger) subee.MultiMessagesConsumerInterceptor {
-	return func(consumer subee.MultiMessagesConsumer) subee.MultiMessagesConsumer {
-		return subee.MultiMessagesConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
+// BatchConsumerInterceptor returns a new multi messages consumer interceptor for logging with zap.
+func BatchConsumerInterceptor(logger *zap.Logger) subee.BatchConsumerInterceptor {
+	return func(consumer subee.BatchConsumer) subee.BatchConsumer {
+		return subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
 			startConsume(logger, len(msgs))
 
 			startTime := time.Now()
 
-			err := consumer.Consume(ctx, msgs)
+			err := consumer.BatchConsume(ctx, msgs)
 
 			endConsume(logger, since(startTime), len(msgs), err)
 

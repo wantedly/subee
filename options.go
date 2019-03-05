@@ -5,25 +5,25 @@ import "time"
 // Option configures Config.
 type Option func(*Config)
 
-// WithSingleMessageConsumerInterceptors returns an Option that sets the SingleMessageConsumerInterceptor implementations(s).
+// WithConsumerInterceptors returns an Option that sets the ConsumerInterceptor implementations(s).
 // Interceptors are called in order of addition.
-// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => SingleMessageConsumer.Consume
-func WithSingleMessageConsumerInterceptors(interceptors ...SingleMessageConsumerInterceptor) Option {
+// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => Consumer.Consume
+func WithConsumerInterceptors(interceptors ...ConsumerInterceptor) Option {
 	return func(c *Config) {
-		c.SingleMessageConsumer = chainSingleMessageConsumerInterceptors(c.SingleMessageConsumer, interceptors...)
+		c.Consumer = chainConsumerInterceptors(c.Consumer, interceptors...)
 	}
 }
 
-// WithMultiMessagesConsumerInterceptors returns an Option that sets the MultiMessagesConsumerInterceptor implementations(s).
+// WithBatchConsumerInterceptors returns an Option that sets the BatchConsumerInterceptor implementations(s).
 // Interceptors are called in order of addition.
-// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => MultiMessagesConsumer.Consume
-func WithMultiMessagesConsumerInterceptors(interceptors ...MultiMessagesConsumerInterceptor) Option {
+// e.g) interceptor1, interceptor2, interceptor3 => interceptor1 => interceptor2 => interceptor3 => BatchConsumer.Consume
+func WithBatchConsumerInterceptors(interceptors ...BatchConsumerInterceptor) Option {
 	return func(c *Config) {
-		c.MultiMessagesConsumer = chainMultiMessagesConsumerInterceptors(c.MultiMessagesConsumer, interceptors...)
+		c.BatchConsumer = chainBatchConsumerInterceptors(c.BatchConsumer, interceptors...)
 	}
 }
 
-func chainSingleMessageConsumerInterceptors(consumer SingleMessageConsumer, interceptors ...SingleMessageConsumerInterceptor) SingleMessageConsumer {
+func chainConsumerInterceptors(consumer Consumer, interceptors ...ConsumerInterceptor) Consumer {
 	if len(interceptors) == 0 {
 		return consumer
 	}
@@ -34,7 +34,7 @@ func chainSingleMessageConsumerInterceptors(consumer SingleMessageConsumer, inte
 	return consumer
 }
 
-func chainMultiMessagesConsumerInterceptors(consumer MultiMessagesConsumer, interceptors ...MultiMessagesConsumerInterceptor) MultiMessagesConsumer {
+func chainBatchConsumerInterceptors(consumer BatchConsumer, interceptors ...BatchConsumerInterceptor) BatchConsumer {
 	if len(interceptors) == 0 {
 		return consumer
 	}

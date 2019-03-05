@@ -16,13 +16,13 @@ func writeHandler(buf *bytes.Buffer) RecoveryHandlerFunc {
 	}
 }
 
-func TestSingleMessageConsumerInterceptor(t *testing.T) {
+func TestConsumerInterceptor(t *testing.T) {
 	buf := &bytes.Buffer{}
 
-	tag := "SingleMessageConsumer"
+	tag := "Consumer"
 
-	SingleMessageConsumerInterceptor(writeHandler(buf))(
-		subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+	ConsumerInterceptor(writeHandler(buf))(
+		subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
 			panic(tag)
 			return nil
 		}),
@@ -36,19 +36,19 @@ func TestSingleMessageConsumerInterceptor(t *testing.T) {
 	}
 }
 
-func TestMultiMessagesConsumerInterceptor(t *testing.T) {
+func TestBatchConsumerInterceptor(t *testing.T) {
 	buf := &bytes.Buffer{}
 
-	tag := "MultiMessagesConsumer"
+	tag := "BatchConsumer"
 
-	SingleMessageConsumerInterceptor(writeHandler(buf))(
-		subee.SingleMessageConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+	BatchConsumerInterceptor(writeHandler(buf))(
+		subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
 			panic(tag)
 			return nil
 		}),
-	).Consume(
+	).BatchConsume(
 		context.Background(),
-		message_testing.NewFakeMessage(nil, false, false),
+		[]subee.Message{message_testing.NewFakeMessage(nil, false, false)},
 	)
 
 	if got, want := buf.String(), tag; got != want {
