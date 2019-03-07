@@ -14,7 +14,7 @@ func (f BatchConsumerFunc) BatchConsume(ctx context.Context, msgs []Message) err
 	return errors.WithStack(f(ctx, msgs))
 }
 
-// BatchConsumerInterceptor provides a hook to intercept the execution of a multiple message consumption.
+// BatchConsumerInterceptor provides a hook to intercept the execution of a multiple messages consumption.
 type BatchConsumerInterceptor func(BatchConsumer) BatchConsumer
 
 // ConsumerFunc type is an adapter to allow the use of ordinary functions as Consumer.
