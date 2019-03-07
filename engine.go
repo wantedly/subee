@@ -113,16 +113,20 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 	}
 }
 
-func (e *Engine) consume(qm queuedMessage) error {
-	if m, ok := qm.(*singleMessage); ok {
-		return errors.WithStack(e.Consumer.Consume(m.Ctx, m.Msg))
+func (e *Engine) handle(msgCh <-chan queuedMessage) error {
+	var (
+		consumer      Consumer
+		batchConsumer BatchConsumer
+	)
+	switch {
+	case e.Consumer != nil:
+		consumer = chainConsumerInterceptors(e.Consumer, e.ConsumerInterceptors...)
+	case e.BatchConsumer != nil:
+		batchConsumer = chainBatchConsumerInterceptors(e.BatchConsumer, e.BatchConsumerInterceptors...)
+	default:
+		panic("unreachable")
 	}
 
-	m := qm.(*multiMessages)
-	return errors.WithStack(e.BatchConsumer.BatchConsume(m.Ctx, m.Msgs))
-}
-
-func (e *Engine) handle(msgCh <-chan queuedMessage) error {
 	e.Logger.Print("Start consume process")
 	defer e.Logger.Print("Finish consume process")
 
@@ -140,8 +144,16 @@ func (e *Engine) handle(msgCh <-chan queuedMessage) error {
 
 		m.SetContext(e.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
 
-		// discard the error, because error can be handled with interceptor.
-		err := e.consume(m)
+		var err error
+		switch m := m.(type) {
+		case *singleMessage:
+			err = errors.WithStack(consumer.Consume(m.Ctx, m.Msg))
+		case *multiMessages:
+			err = errors.WithStack(batchConsumer.BatchConsume(m.Ctx, m.Msgs))
+		default:
+			panic("unreachable")
+		}
+
 		if !e.AckImmediately {
 			if err != nil {
 				m.Nack()

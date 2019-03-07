@@ -27,3 +27,25 @@ func (f ConsumerFunc) Consume(ctx context.Context, msg Message) error {
 
 // ConsumerInterceptor provides a hook to intercept the execution of a multiple message consumption.
 type ConsumerInterceptor func(Consumer) Consumer
+
+func chainConsumerInterceptors(consumer Consumer, interceptors ...ConsumerInterceptor) Consumer {
+	if len(interceptors) == 0 {
+		return consumer
+	}
+
+	for i := len(interceptors) - 1; i >= 0; i-- {
+		consumer = interceptors[i](consumer)
+	}
+	return consumer
+}
+
+func chainBatchConsumerInterceptors(consumer BatchConsumer, interceptors ...BatchConsumerInterceptor) BatchConsumer {
+	if len(interceptors) == 0 {
+		return consumer
+	}
+
+	for i := len(interceptors) - 1; i >= 0; i-- {
+		consumer = interceptors[i](consumer)
+	}
+	return consumer
+}

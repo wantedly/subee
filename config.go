@@ -26,9 +26,11 @@ type Config struct {
 
 	StatsHandler StatsHandler
 
-	BatchConsumer BatchConsumer
+	BatchConsumer             BatchConsumer
+	BatchConsumerInterceptors []BatchConsumerInterceptor
 
-	Consumer Consumer
+	Consumer             Consumer
+	ConsumerInterceptors []ConsumerInterceptor
 }
 
 func (c *Config) apply(opts []Option) {
