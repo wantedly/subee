@@ -43,13 +43,13 @@ func TestConsumerInterceptor(t *testing.T) {
 	logger := dummyLogger(buf)
 
 	want := `{"level":"INFO","msg":"Start consume message.","message_count":1}
-{"level":"INFO","msg":"called single message consumer func"}
+{"level":"INFO","msg":"called consumer func"}
 {"level":"INFO","msg":"End consume message.","message_count":1,"time":"0s"}
 `
 
 	ConsumerInterceptor(logger)(
 		subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
-			logger.Info("called single message consumer func")
+			logger.Info("called consumer func")
 			return nil
 		}),
 	).Consume(
@@ -75,13 +75,13 @@ func TestBatchConsumerInterceptor(t *testing.T) {
 	logger := dummyLogger(buf)
 
 	want := `{"level":"INFO","msg":"Start consume message.","message_count":2}
-{"level":"INFO","msg":"called single message consumer func"}
+{"level":"INFO","msg":"called batch consumer func"}
 {"level":"INFO","msg":"End consume message.","message_count":2,"time":"0s"}
 `
 
 	BatchConsumerInterceptor(logger)(
 		subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
-			logger.Info("called single message consumer func")
+			logger.Info("called batch consumer func")
 			return nil
 		}),
 	).BatchConsume(
