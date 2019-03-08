@@ -8,19 +8,20 @@ import (
 )
 
 // RecoveryHandlerFunc is a function that recovers from the panic `p`
-type RecoveryHandlerFunc func(ctx context.Context, p interface{})
+type RecoveryHandlerFunc func(ctx context.Context, p interface{}) error
 
 // ConsumerInterceptor returns a new consumer interceptor to recovery from panic.
 func ConsumerInterceptor(f RecoveryHandlerFunc) subee.ConsumerInterceptor {
 	return func(consumer subee.Consumer) subee.Consumer {
-		return subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+		return subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) (err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					f(ctx, r)
+					err = f(ctx, r)
 				}
 			}()
 
-			return errors.WithStack(consumer.Consume(ctx, msg))
+			err = errors.WithStack(consumer.Consume(ctx, msg))
+			return
 		})
 	}
 }
@@ -28,14 +29,15 @@ func ConsumerInterceptor(f RecoveryHandlerFunc) subee.ConsumerInterceptor {
 // BatchConsumerInterceptor returns a new batch consumer interceptor to recovery from panic.
 func BatchConsumerInterceptor(f RecoveryHandlerFunc) subee.BatchConsumerInterceptor {
 	return func(consumer subee.BatchConsumer) subee.BatchConsumer {
-		return subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
+		return subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) (err error) {
 			defer func() {
 				if r := recover(); r != nil {
-					f(ctx, r)
+					err = f(ctx, r)
 				}
 			}()
 
-			return errors.WithStack(consumer.BatchConsume(ctx, msgs))
+			err = errors.WithStack(consumer.BatchConsume(ctx, msgs))
+			return
 		})
 	}
 }
