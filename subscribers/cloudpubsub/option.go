@@ -1,9 +1,13 @@
 package cloudpubsub
 
-import "google.golang.org/api/option"
+import (
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/api/option"
+)
 
 type Config struct {
-	ClientOpts []option.ClientOption
+	ClientOpts      []option.ClientOption
+	ReceiveSettings pubsub.ReceiveSettings
 }
 
 func (c *Config) apply(opts []Option) {
@@ -19,5 +23,12 @@ type Option func(*Config)
 func WithClientOptions(opts ...option.ClientOption) Option {
 	return func(c *Config) {
 		c.ClientOpts = opts
+	}
+}
+
+// WithReceiveSettings returns an Option that set pubsub.ReceiveSettings to the pubsub.Subscription.
+func WithReceiveSettings(cfg pubsub.ReceiveSettings) Option {
+	return func(c *Config) {
+		c.ReceiveSettings = cfg
 	}
 }
