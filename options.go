@@ -61,3 +61,12 @@ func WithAckImmediately() Option {
 		c.AckImmediately = true
 	}
 }
+
+// WithConcurrency returns an Option that sets the size of goroutines which consume messages concurrently.
+func WithConcurrency(size int) Option {
+	return func(c *Config) {
+		if size > 0 {
+			c.Concurrency = size
+		}
+	}
+}

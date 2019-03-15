@@ -83,7 +83,7 @@ func (e *Engine) Start(ctx context.Context) error {
 
 	eg.Go(func() error {
 		defer close(sigDoneCh)
-		return e.handle(outCh)
+		return e.handleConcurrently(outCh)
 	})
 
 	err := eg.Wait()
@@ -113,7 +113,21 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 	}
 }
 
-func (e *Engine) handle(msgCh <-chan queuedMessage) error {
+func (e *Engine) handleConcurrently(msgCh <-chan queuedMessage) error {
+	eg := errgroup.Group{}
+
+	for i := 0; i < e.Config.Concurrency; i++ {
+		eg.Go(func() error {
+			return e.handle(msgCh, i)
+		})
+	}
+
+	err := eg.Wait()
+
+	return err
+}
+
+func (e *Engine) handle(msgCh <-chan queuedMessage, id int) error {
 	var (
 		consumer      Consumer
 		batchConsumer BatchConsumer
@@ -127,8 +141,8 @@ func (e *Engine) handle(msgCh <-chan queuedMessage) error {
 		panic("unreachable")
 	}
 
-	e.Logger.Print("Start consume process")
-	defer e.Logger.Print("Finish consume process")
+	e.Logger.Printf("Start consumer %d", id)
+	defer e.Logger.Printf("Finish consumer %d", id)
 
 	for m := range msgCh {
 		if e.AckImmediately {

@@ -12,6 +12,9 @@ const (
 
 	// DefaultFlushInterval is the default maximum flush interval to receive messages.
 	DefaultFlushInterval = 10 * time.Second
+
+	// DefaultConcurrency is the default size of goroutines which consume messages concurrently.
+	DefaultConcurrency = 1
 )
 
 // Config represents the configuration for subee.
@@ -31,6 +34,8 @@ type Config struct {
 
 	Consumer             Consumer
 	ConsumerInterceptors []ConsumerInterceptor
+
+	Concurrency int
 }
 
 func (c *Config) apply(opts []Option) {
@@ -46,5 +51,6 @@ func newDefaultConfig() *Config {
 		FlushInterval: DefaultFlushInterval,
 		Logger:        log.New(os.Stdout, "", log.LstdFlags),
 		StatsHandler:  new(NopStatsHandler),
+		Concurrency:   DefaultConcurrency,
 	}
 }
