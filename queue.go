@@ -57,30 +57,6 @@ func (m *multiMessages) SetContext(ctx context.Context) { m.Ctx = ctx }
 
 func (m *multiMessages) GetEnqueuedAt() time.Time { return m.EnqueuedAt }
 
-func createQueue(
-	createCtx func() context.Context,
-) (
-	chan<- Message,
-	<-chan queuedMessage,
-) {
-	inCh := make(chan Message)
-	outCh := make(chan queuedMessage)
-
-	go func() {
-		defer close(outCh)
-
-		for msg := range inCh {
-			outCh <- &singleMessage{
-				Ctx:        createCtx(),
-				Msg:        msg,
-				EnqueuedAt: time.Now(),
-			}
-		}
-	}()
-
-	return inCh, outCh
-}
-
 func createBufferedQueue(
 	createCtx func() context.Context,
 	chunkSize int,

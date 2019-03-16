@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -56,34 +57,16 @@ func (e *Engine) Start(ctx context.Context) error {
 		return e.watchShutdownSignal(sigDoneCh, cancel)
 	})
 
-	var (
-		inCh  chan<- Message
-		outCh <-chan queuedMessage
-	)
-
-	if e.Consumer != nil {
-		inCh, outCh = createQueue(
-			queuingContext(e.StatsHandler),
-		)
-	}
-
-	if e.BatchConsumer != nil {
-		inCh, outCh = createBufferedQueue(
-			queuingContext(e.StatsHandler),
-			e.ChunkSize,
-			e.FlushInterval,
-		)
-	}
-
-	eg.Go(func() error {
-		defer close(inCh)
-		err := e.subscriber.Subscribe(ctx, func(msg Message) { inCh <- msg })
-		return errors.WithStack(err)
-	})
-
 	eg.Go(func() error {
 		defer close(sigDoneCh)
-		return e.handle(outCh)
+		switch {
+		case e.Consumer != nil:
+			return errors.WithStack(e.startConsumingProcess(ctx))
+		case e.BatchConsumer != nil:
+			return errors.WithStack(e.startBatchConsumingProcess(ctx))
+		default:
+			panic("unreachable")
+		}
 	})
 
 	err := eg.Wait()
@@ -113,67 +96,110 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 	}
 }
 
-func (e *Engine) handle(msgCh <-chan queuedMessage) error {
+func (e *Engine) startConsumingProcess(ctx context.Context) error {
+	consumer := chainConsumerInterceptors(e.Consumer, e.ConsumerInterceptors...)
+
+	err := e.startSubscribing(ctx, func(in Message) {
+		msg := &singleMessage{
+			Ctx:        e.createConsumingContext(),
+			Msg:        in,
+			EnqueuedAt: time.Now(),
+		}
+		e.handleMessage(msg, func(in queuedMessage) error {
+			m := in.(*singleMessage)
+			return errors.WithStack(consumer.Consume(m.Ctx, m.Msg))
+		})
+	})
+	return errors.WithStack(err)
+}
+
+func (e *Engine) startBatchConsumingProcess(ctx context.Context) error {
 	var (
-		consumer      Consumer
-		batchConsumer BatchConsumer
+		err error
+		wg  sync.WaitGroup
 	)
-	switch {
-	case e.Consumer != nil:
-		consumer = chainConsumerInterceptors(e.Consumer, e.ConsumerInterceptors...)
-	case e.BatchConsumer != nil:
-		batchConsumer = chainBatchConsumerInterceptors(e.BatchConsumer, e.BatchConsumerInterceptors...)
-	default:
-		panic("unreachable")
+
+	inCh, outCh := createBufferedQueue(
+		e.createConsumingContext,
+		e.ChunkSize,
+		e.FlushInterval,
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(inCh)
+
+		err = errors.WithStack(e.startSubscribing(ctx, func(msg Message) { inCh <- msg }))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		batchConsumer := chainBatchConsumerInterceptors(e.BatchConsumer, e.BatchConsumerInterceptors...)
+
+		e.Logger.Print("Start consuming process")
+		defer e.Logger.Print("Finish consuming process")
+
+		for m := range outCh {
+			e.handleMessage(m, func(in queuedMessage) error {
+				m := in.(*multiMessages)
+				return errors.WithStack(batchConsumer.BatchConsume(m.Ctx, m.Msgs))
+			})
+		}
+	}()
+
+	wg.Wait()
+
+	return err
+}
+
+func (e *Engine) startSubscribing(ctx context.Context, f func(msg Message)) error {
+	e.Logger.Print("Start subscribing process")
+	defer e.Logger.Print("Finish subscribing process")
+	return errors.WithStack(e.subscriber.Subscribe(ctx, f))
+}
+
+func (e *Engine) createConsumingContext() context.Context {
+	ctx := context.Background()
+	ctx = e.StatsHandler.TagProcess(ctx, &BeginTag{})
+	ctx = e.StatsHandler.TagProcess(ctx, &EnqueueTag{})
+	return ctx
+}
+
+func (e *Engine) handleMessage(m queuedMessage, handle func(queuedMessage) error) {
+	if e.AckImmediately {
+		m.Ack()
 	}
 
-	e.Logger.Print("Start consume process")
-	defer e.Logger.Print("Finish consume process")
+	e.StatsHandler.HandleProcess(m.Context(), &Dequeue{
+		BeginTime: m.GetEnqueuedAt(),
+		EndTime:   time.Now(),
+	})
 
-	for m := range msgCh {
-		if e.AckImmediately {
+	beginTime := time.Now()
+
+	m.SetContext(e.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
+
+	err := handle(m)
+
+	if !e.AckImmediately {
+		if err != nil {
+			m.Nack()
+		} else {
 			m.Ack()
 		}
-
-		e.StatsHandler.HandleProcess(m.Context(), &Dequeue{
-			BeginTime: m.GetEnqueuedAt(),
-			EndTime:   time.Now(),
-		})
-
-		beginTime := time.Now()
-
-		m.SetContext(e.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
-
-		var err error
-		switch m := m.(type) {
-		case *singleMessage:
-			err = errors.WithStack(consumer.Consume(m.Ctx, m.Msg))
-		case *multiMessages:
-			err = errors.WithStack(batchConsumer.BatchConsume(m.Ctx, m.Msgs))
-		default:
-			panic("unreachable")
-		}
-
-		if !e.AckImmediately {
-			if err != nil {
-				m.Nack()
-			} else {
-				m.Ack()
-			}
-		}
-
-		e.StatsHandler.HandleProcess(m.Context(), &ConsumeEnd{
-			BeginTime: beginTime,
-			EndTime:   time.Now(),
-			Error:     err,
-		})
-
-		e.StatsHandler.HandleProcess(m.Context(), &End{
-			MsgCount:  m.Count(),
-			BeginTime: m.GetEnqueuedAt(),
-			EndTime:   time.Now(),
-		})
 	}
 
-	return nil
+	e.StatsHandler.HandleProcess(m.Context(), &ConsumeEnd{
+		BeginTime: beginTime,
+		EndTime:   time.Now(),
+		Error:     err,
+	})
+
+	e.StatsHandler.HandleProcess(m.Context(), &End{
+		MsgCount:  m.Count(),
+		BeginTime: m.GetEnqueuedAt(),
+		EndTime:   time.Now(),
+	})
 }

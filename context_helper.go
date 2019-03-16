@@ -14,12 +14,3 @@ func GetLogger(ctx context.Context) Logger {
 func setLogger(ctx context.Context, l Logger) context.Context {
 	return context.WithValue(ctx, loggerContextKey{}, l)
 }
-
-func queuingContext(sh StatsHandler) func() context.Context {
-	return func() context.Context {
-		ctx := context.Background()
-		ctx = sh.TagProcess(ctx, &BeginTag{})
-		ctx = sh.TagProcess(ctx, &EnqueueTag{})
-		return ctx
-	}
-}
