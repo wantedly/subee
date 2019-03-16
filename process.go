@@ -14,6 +14,7 @@ type process interface {
 
 type processImpl struct {
 	*Engine
+	wg sync.WaitGroup
 }
 
 func newProcess(e *Engine) process {
@@ -23,6 +24,8 @@ func newProcess(e *Engine) process {
 }
 
 func (p *processImpl) Start(ctx context.Context) error {
+	defer p.wg.Wait()
+
 	switch {
 	case p.Consumer != nil:
 		return errors.WithStack(p.startConsumingProcess(ctx))
@@ -51,28 +54,15 @@ func (p *processImpl) startConsumingProcess(ctx context.Context) error {
 }
 
 func (p *processImpl) startBatchConsumingProcess(ctx context.Context) error {
-	var (
-		err error
-		wg  sync.WaitGroup
-	)
-
 	inCh, outCh := createBufferedQueue(
 		p.createConsumingContext,
 		p.ChunkSize,
 		p.FlushInterval,
 	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer close(inCh)
+	defer close(inCh)
 
-		err = errors.WithStack(p.startSubscribing(ctx, func(msg Message) { inCh <- msg }))
-	}()
-
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		batchConsumer := chainBatchConsumerInterceptors(p.BatchConsumer, p.BatchConsumerInterceptors...)
 
 		p.Logger.Print("Start consuming process")
@@ -86,9 +76,7 @@ func (p *processImpl) startBatchConsumingProcess(ctx context.Context) error {
 		}
 	}()
 
-	wg.Wait()
-
-	return err
+	return errors.WithStack(p.startSubscribing(ctx, func(msg Message) { inCh <- msg }))
 }
 
 func (p *processImpl) startSubscribing(ctx context.Context, f func(msg Message)) error {
@@ -105,38 +93,42 @@ func (p *processImpl) createConsumingContext() context.Context {
 }
 
 func (p *processImpl) handleMessage(m queuedMessage, handle func(queuedMessage) error) {
-	if p.AckImmediately {
-		m.Ack()
-	}
-
-	p.StatsHandler.HandleProcess(m.Context(), &Dequeue{
-		BeginTime: m.GetEnqueuedAt(),
-		EndTime:   time.Now(),
-	})
-
-	beginTime := time.Now()
-
-	m.SetContext(p.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
-
-	err := handle(m)
-
-	if !p.AckImmediately {
-		if err != nil {
-			m.Nack()
-		} else {
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		if p.AckImmediately {
 			m.Ack()
 		}
-	}
 
-	p.StatsHandler.HandleProcess(m.Context(), &ConsumeEnd{
-		BeginTime: beginTime,
-		EndTime:   time.Now(),
-		Error:     err,
-	})
+		p.StatsHandler.HandleProcess(m.Context(), &Dequeue{
+			BeginTime: m.GetEnqueuedAt(),
+			EndTime:   time.Now(),
+		})
 
-	p.StatsHandler.HandleProcess(m.Context(), &End{
-		MsgCount:  m.Count(),
-		BeginTime: m.GetEnqueuedAt(),
-		EndTime:   time.Now(),
-	})
+		beginTime := time.Now()
+
+		m.SetContext(p.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
+
+		err := handle(m)
+
+		if !p.AckImmediately {
+			if err != nil {
+				m.Nack()
+			} else {
+				m.Ack()
+			}
+		}
+
+		p.StatsHandler.HandleProcess(m.Context(), &ConsumeEnd{
+			BeginTime: beginTime,
+			EndTime:   time.Now(),
+			Error:     err,
+		})
+
+		p.StatsHandler.HandleProcess(m.Context(), &End{
+			MsgCount:  m.Count(),
+			BeginTime: m.GetEnqueuedAt(),
+			EndTime:   time.Now(),
+		})
+	}()
 }
