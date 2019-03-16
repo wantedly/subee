@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// process encapsulates a subscribing routine and a consuming messages routine.
 type process interface {
 	Start(ctx context.Context) error
 }
@@ -26,7 +27,7 @@ func newProcess(e *Engine) process {
 func (p *processImpl) Start(ctx context.Context) error {
 	p.Logger.Print("Start process")
 	defer p.Logger.Print("Finish process")
-	defer p.wg.Wait()
+	defer p.wg.Wait() // To wait for consuming all received messages.
 
 	switch {
 	case p.Consumer != nil:
