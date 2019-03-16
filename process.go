@@ -24,9 +24,9 @@ func newProcess(e *Engine) process {
 }
 
 func (p *processImpl) Start(ctx context.Context) error {
-	defer p.wg.Wait()
 	p.Logger.Print("Start process")
 	defer p.Logger.Print("Finish process")
+	defer p.wg.Wait()
 
 	switch {
 	case p.Consumer != nil:
