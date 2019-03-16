@@ -8,33 +8,17 @@ import (
 type queuedMessage interface {
 	Acknowledger
 	Count() int
-	Context() context.Context
-	SetContext(ctx context.Context)
-	GetEnqueuedAt() time.Time
 }
 
 type singleMessage struct {
-	Ctx        context.Context
-	Msg        Message
-	EnqueuedAt time.Time
+	Message
 }
-
-func (s *singleMessage) Ack() { s.Msg.Ack() }
-
-func (s *singleMessage) Nack() { s.Msg.Nack() }
-
-func (s *singleMessage) Context() context.Context { return s.Ctx }
-
-func (s *singleMessage) SetContext(ctx context.Context) { s.Ctx = ctx }
 
 func (s *singleMessage) Count() int { return 1 }
 
-func (s *singleMessage) GetEnqueuedAt() time.Time { return s.EnqueuedAt }
-
 type multiMessages struct {
-	Ctx        context.Context
-	Msgs       []Message
-	EnqueuedAt time.Time
+	Ctx  context.Context
+	Msgs []Message
 }
 
 func (m *multiMessages) Ack() {
@@ -51,22 +35,16 @@ func (m *multiMessages) Nack() {
 
 func (m *multiMessages) Count() int { return len(m.Msgs) }
 
-func (m *multiMessages) Context() context.Context { return m.Ctx }
-
-func (m *multiMessages) SetContext(ctx context.Context) { m.Ctx = ctx }
-
-func (m *multiMessages) GetEnqueuedAt() time.Time { return m.EnqueuedAt }
-
 func createBufferedQueue(
 	createCtx func() context.Context,
 	chunkSize int,
 	flushInterval time.Duration,
 ) (
 	chan<- Message,
-	<-chan queuedMessage,
+	<-chan *multiMessages,
 ) {
 	inCh := make(chan Message, chunkSize)
-	outCh := make(chan queuedMessage)
+	outCh := make(chan *multiMessages)
 
 	go func() {
 		defer close(outCh)
@@ -76,9 +54,8 @@ func createBufferedQueue(
 
 			if len(msgs) > 0 {
 				outCh <- &multiMessages{
-					Ctx:        createCtx(),
-					Msgs:       msgs,
-					EnqueuedAt: time.Now(),
+					Ctx:  createCtx(),
+					Msgs: msgs,
 				}
 			}
 

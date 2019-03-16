@@ -42,14 +42,8 @@ func (p *processImpl) startConsumingProcess(ctx context.Context) error {
 	consumer := chainConsumerInterceptors(p.Consumer, p.ConsumerInterceptors...)
 
 	err := p.subscribe(ctx, func(in Message) {
-		msg := &singleMessage{
-			Ctx:        p.createConsumingContext(),
-			Msg:        in,
-			EnqueuedAt: time.Now(),
-		}
-		p.handleMessage(msg, func(in queuedMessage) error {
-			m := in.(*singleMessage)
-			return errors.WithStack(consumer.Consume(m.Ctx, m.Msg))
+		p.handleMessage(p.createConsumingContext(), &singleMessage{Message: in}, func(ctx context.Context) error {
+			return errors.WithStack(consumer.Consume(ctx, in))
 		})
 	})
 	return errors.WithStack(err)
@@ -73,9 +67,9 @@ func (p *processImpl) startBatchConsumingProcess(ctx context.Context) error {
 		defer p.Logger.Print("Finish batch consuming process")
 
 		for m := range outCh {
-			p.handleMessage(m, func(in queuedMessage) error {
-				m := in.(*multiMessages)
-				return errors.WithStack(batchConsumer.BatchConsume(m.Ctx, m.Msgs))
+			msgs := m.Msgs
+			p.handleMessage(m.Ctx, m, func(ctx context.Context) error {
+				return errors.WithStack(batchConsumer.BatchConsume(ctx, msgs))
 			})
 		}
 	}()
@@ -93,10 +87,11 @@ func (p *processImpl) createConsumingContext() context.Context {
 	ctx := context.Background()
 	ctx = p.StatsHandler.TagProcess(ctx, &BeginTag{})
 	ctx = p.StatsHandler.TagProcess(ctx, &EnqueueTag{})
+	ctx = setEnqueuedAt(ctx, time.Now().UTC())
 	return ctx
 }
 
-func (p *processImpl) handleMessage(m queuedMessage, handle func(queuedMessage) error) {
+func (p *processImpl) handleMessage(ctx context.Context, m queuedMessage, handle func(context.Context) error) {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -107,16 +102,18 @@ func (p *processImpl) handleMessage(m queuedMessage, handle func(queuedMessage) 
 			m.Ack()
 		}
 
-		p.StatsHandler.HandleProcess(m.Context(), &Dequeue{
-			BeginTime: m.GetEnqueuedAt(),
+		enqueuedAt := getEnqueuedAt(ctx)
+
+		p.StatsHandler.HandleProcess(ctx, &Dequeue{
+			BeginTime: enqueuedAt,
 			EndTime:   time.Now(),
 		})
 
 		beginTime := time.Now()
 
-		m.SetContext(p.StatsHandler.TagProcess(m.Context(), &ConsumeBeginTag{}))
+		ctx = p.StatsHandler.TagProcess(ctx, &ConsumeBeginTag{})
 
-		err := handle(m)
+		err := handle(ctx)
 
 		if !p.AckImmediately {
 			if err != nil {
@@ -126,15 +123,15 @@ func (p *processImpl) handleMessage(m queuedMessage, handle func(queuedMessage) 
 			}
 		}
 
-		p.StatsHandler.HandleProcess(m.Context(), &ConsumeEnd{
+		p.StatsHandler.HandleProcess(ctx, &ConsumeEnd{
 			BeginTime: beginTime,
 			EndTime:   time.Now(),
 			Error:     err,
 		})
 
-		p.StatsHandler.HandleProcess(m.Context(), &End{
+		p.StatsHandler.HandleProcess(ctx, &End{
 			MsgCount:  m.Count(),
-			BeginTime: m.GetEnqueuedAt(),
+			BeginTime: enqueuedAt,
 			EndTime:   time.Now(),
 		})
 	}()
