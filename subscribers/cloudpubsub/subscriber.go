@@ -16,9 +16,7 @@ type subscriberImpl struct {
 
 // CreateSubscriber returns Subscriber implementation.
 func CreateSubscriber(ctx context.Context, projectID, subscriptionID string, opts ...Option) (subee.Subscriber, error) {
-	cfg := &Config{
-		ReceiveSettings: pubsub.ReceiveSettings{Synchronous: true},
-	}
+	cfg := new(Config)
 	cfg.apply(opts)
 
 	sub := &subscriberImpl{
