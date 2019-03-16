@@ -64,7 +64,9 @@ func (p *processImpl) startBatchConsumingProcess(ctx context.Context) error {
 
 	defer close(inCh)
 
+	p.wg.Add(1)
 	go func() {
+		defer p.wg.Done()
 		batchConsumer := chainBatchConsumerInterceptors(p.BatchConsumer, p.BatchConsumerInterceptors...)
 
 		p.Logger.Print("Start batch consuming process")
