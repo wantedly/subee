@@ -15,7 +15,7 @@ var since = func(t time.Time) time.Duration {
 	return time.Since(t)
 }
 
-// ConsumerInterceptor returns a new single message consumer interceptor for logging with zap.
+// ConsumerInterceptor returns a new consumer interceptor for logging with zap.
 func ConsumerInterceptor(logger *zap.Logger) subee.ConsumerInterceptor {
 	return func(consumer subee.Consumer) subee.Consumer {
 		return subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
@@ -34,7 +34,7 @@ func ConsumerInterceptor(logger *zap.Logger) subee.ConsumerInterceptor {
 	}
 }
 
-// BatchConsumerInterceptor returns a new multi messages consumer interceptor for logging with zap.
+// BatchConsumerInterceptor returns a new batch consumer interceptor for logging with zap.
 func BatchConsumerInterceptor(logger *zap.Logger) subee.BatchConsumerInterceptor {
 	return func(consumer subee.BatchConsumer) subee.BatchConsumer {
 		return subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {

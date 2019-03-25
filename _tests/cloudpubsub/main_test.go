@@ -25,7 +25,7 @@ func TestEngineWithConsumer(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	const subscriptionID = "subscription_id_for_single_message_consumer"
+	const subscriptionID = "subscription_id_for_consumer"
 
 	publisher, err := createPublisher(ctx, projectID, topicID, subscriptionID)
 	if err != nil {
@@ -72,7 +72,7 @@ func TestEngineWithBatchConsumer(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	const subscriptionID = "subscription_id_for_multi_messages_consumer"
+	const subscriptionID = "subscription_id_for_batch_consumer"
 
 	publisher, err := createPublisher(ctx, projectID, topicID, subscriptionID)
 	if err != nil {
