@@ -26,7 +26,6 @@ type statsHandler struct {
 type (
 	queueContextKey   struct{}
 	consumeContextKey struct{}
-	processContextKey struct{}
 )
 
 func (sh *statsHandler) TagProcess(ctx context.Context, t subee.Tag) context.Context {
