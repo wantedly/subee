@@ -10,7 +10,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		TransactionName:     "Subee",
 		ConsumeSegmentName:  "Consume",
-		QueueingSegmentName: "Message Queueing",
+		QueueingSegmentName: "Message Queuing",
 	}
 }
 
