@@ -22,7 +22,7 @@ type Option func(*Config)
 // WithClientOptions returns an Option that set option.ClientOption implementation(s).
 func WithClientOptions(opts ...option.ClientOption) Option {
 	return func(c *Config) {
-		c.ClientOpts = opts
+		c.ClientOpts = append(c.ClientOpts, opts...)
 	}
 }
 
