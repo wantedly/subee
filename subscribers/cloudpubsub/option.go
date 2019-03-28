@@ -5,6 +5,7 @@ import (
 	"google.golang.org/api/option"
 )
 
+// Config represents subscriber configuration.
 type Config struct {
 	ClientOpts      []option.ClientOption
 	ReceiveSettings pubsub.ReceiveSettings
