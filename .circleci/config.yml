@@ -5,7 +5,7 @@ executors:
     parameters:
       version:
         type: enum
-        enum: ['1.12-rc', '1.11.5']
+        enum: ['1.12.1', '1.11.6']
     docker:
       - image: circleci/golang:<< parameters.version >>
 
@@ -39,7 +39,7 @@ jobs:
             - run: go test -race -v ./...
   e2e:
     docker:
-      - image: circleci/golang:1.11.5
+      - image: circleci/golang:1.12.1
       - image: google/cloud-sdk:235.0.0
         command: [gcloud, beta, emulators, pubsub, start, '--host-port=0.0.0.0:8085']
     environment:
@@ -64,14 +64,14 @@ workflows:
   test:
     jobs:
       - test:
-          name: 1.12-rc
+          name: 1.12.1
           cover: true
           exec:
             name: golang
-            version: 1.12-rc
+            version: 1.12.1
       - test:
-          name: 1.11.5
+          name: 1.11.6
           exec:
             name: golang
-            version: 1.11.5
+            version: 1.11.6
       - e2e
