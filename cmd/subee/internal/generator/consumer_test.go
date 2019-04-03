@@ -2,13 +2,15 @@ package generator_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/bradleyjkemp/cupaloy"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/packages/packagestest"
 
-	"github.com/bradleyjkemp/cupaloy"
 	"github.com/wantedly/subee/cmd/subee/internal/generator"
 )
 
@@ -19,48 +21,24 @@ func TestConsumerGenerator(t *testing.T) {
 	}
 
 	cases := []struct {
-		test      string
-		params    generator.ConsumerParams
-		wantFiles []string
+		test   string
+		params generator.ConsumerParams
 	}{
 		{
 			test:   "simple",
 			params: generator.ConsumerParams{Name: "book"},
-			wantFiles: []string{
-				"cmd/book-worker/main.go",
-				"cmd/book-worker/run.go",
-				"pkg/consumer/book_consumer.go",
-			},
 		},
 		{
 			test:   "with Message type",
 			params: generator.ConsumerParams{Name: "book", Encoding: generator.MessageEncodingJSON, Package: generator.Package{Path: "./c"}, Message: "Book"},
-			wantFiles: []string{
-				"cmd/book-worker/main.go",
-				"cmd/book-worker/run.go",
-				"pkg/consumer/book_consumer.go",
-				"pkg/consumer/book_consumer_adapter.go",
-			},
 		},
 		{
 			test:   "with Message type and alias",
 			params: generator.ConsumerParams{Name: "author", Encoding: generator.MessageEncodingJSON, Package: generator.Package{Path: "./d"}, Message: "Author"},
-			wantFiles: []string{
-				"cmd/author-worker/main.go",
-				"cmd/author-worker/run.go",
-				"pkg/consumer/author_consumer.go",
-				"pkg/consumer/author_consumer_adapter.go",
-			},
 		},
 		{
 			test:   "with Encoding protobuf",
 			params: generator.ConsumerParams{Name: "book", Encoding: generator.MessageEncodingProtobuf, Package: generator.Package{Path: "./c"}, Message: "Book"},
-			wantFiles: []string{
-				"cmd/book-worker/main.go",
-				"cmd/book-worker/run.go",
-				"pkg/consumer/book_consumer.go",
-				"pkg/consumer/book_consumer_adapter.go",
-			},
 		},
 	}
 
@@ -90,15 +68,25 @@ func TestConsumerGenerator(t *testing.T) {
 							t.Errorf("returned %+v, want nil", err)
 						}
 
-						for _, f := range tc.wantFiles {
-							f := f
-							t.Run(f, func(t *testing.T) {
-								data, err := exported.FileContents(filepath.Join(exported.Config.Dir, f))
+						err = filepath.Walk(exported.Config.Dir, func(path string, info os.FileInfo, err error) error {
+							if err != nil {
+								t.Errorf("unexpected error: %v", err)
+							}
+							if info.IsDir() {
+								return nil
+							}
+							t.Run(strings.TrimPrefix(path, exported.Config.Dir), func(t *testing.T) {
+								data, err := exported.FileContents(path)
 								if err != nil {
 									t.Fatalf("retuend %v, want, nil", err)
 								}
 								cupaloy.SnapshotT(t, string(data))
 							})
+							return nil
+						})
+
+						if err != nil {
+							t.Errorf("unexpected error: %v", err)
 						}
 					})
 				})
