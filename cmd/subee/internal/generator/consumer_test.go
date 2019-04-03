@@ -75,7 +75,11 @@ func TestConsumerGenerator(t *testing.T) {
 							if info.IsDir() {
 								return nil
 							}
-							t.Run(strings.TrimPrefix(path, exported.Config.Dir), func(t *testing.T) {
+							relpath := strings.TrimPrefix(path, exported.Config.Dir)
+							if !(strings.HasPrefix(relpath, "/pkg/") || strings.HasPrefix(relpath, "/cmd/")) {
+								return nil
+							}
+							t.Run(relpath, func(t *testing.T) {
 								data, err := exported.FileContents(path)
 								if err != nil {
 									t.Fatalf("retuend %v, want, nil", err)
