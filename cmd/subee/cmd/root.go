@@ -10,6 +10,7 @@ func NewSubeeCmd() *cobra.Command {
 	cmd.AddCommand(
 		newGenerateCmd(),
 		newStartCmd(),
+		newVersionCmd(),
 	)
 
 	return cmd
