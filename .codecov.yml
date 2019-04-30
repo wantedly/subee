@@ -1,11 +1,13 @@
 coverage:
   status:
     project:
-      default:
+      cli:
         threshold: 1%
-    patch:
-      default:
-        target: 80%
-
-ignore:
-  - "{,**/}testing/*"
+        paths:
+          - "cmd/subee/"
+      core:
+        threshold: 1%
+        paths:
+          - "!testing/"
+          - "!cmd/"
+    patch: off
