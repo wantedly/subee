@@ -14,6 +14,7 @@ import (
 func newGenerateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "generate",
+		Short:   "Generate a new code",
 		Aliases: []string{"g"},
 	}
 
@@ -29,8 +30,9 @@ func newGenerateSubscriberCmd() *cobra.Command {
 	params.Encoding = generator.MessageEncodingJSON
 
 	cmd := &cobra.Command{
-		Use:  "subscriber NAME",
-		Args: cobra.ExactArgs(1),
+		Use:   "subscriber NAME",
+		Short: "Generate a new subscriber",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params.Name = args[0]
 			wd, err := os.Getwd()

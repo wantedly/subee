@@ -21,7 +21,8 @@ import (
 
 func newStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "start [NAME]",
+		Use:   "start [NAME]",
+		Short: "Build and start subscribers",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
 
