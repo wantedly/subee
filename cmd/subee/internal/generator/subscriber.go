@@ -16,23 +16,23 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-type ConsumerGenerator interface {
-	Generate(context.Context, *ConsumerParams) error
+type SubscriberGenerator interface {
+	Generate(context.Context, *SubscriberParams) error
 }
 
-func NewConsumerGenerator(
+func NewSubscriberGenerator(
 	pkgCfg *packages.Config,
-) ConsumerGenerator {
-	return &consumerGeneratorImpl{
+) SubscriberGenerator {
+	return &subscriberGeneratorImpl{
 		pkgCfg: pkgCfg,
 	}
 }
 
-type consumerGeneratorImpl struct {
+type subscriberGeneratorImpl struct {
 	pkgCfg *packages.Config
 }
 
-func (g *consumerGeneratorImpl) Generate(ctx context.Context, params *ConsumerParams) error {
+func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *SubscriberParams) error {
 	if err := params.Validate(); err != nil {
 		return errors.WithStack(err)
 	}
@@ -94,12 +94,12 @@ func (g *consumerGeneratorImpl) Generate(ctx context.Context, params *ConsumerPa
 		}
 	}
 
-	err := g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "run.go"), params, runTmpl)
+	err := g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-subscriber", "run.go"), params, runTmpl)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	err = g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-worker", "main.go"), params, mainTmpl)
+	err = g.writeFile(filepath.Join("cmd", strcase.ToKebab(params.Name)+"-subscriber", "main.go"), params, mainTmpl)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -111,7 +111,7 @@ func mustCreateTemplate(name, text string) *template.Template {
 	return template.Must(template.New(name).Funcs(tmplFuncs).Parse(text))
 }
 
-func (g *consumerGeneratorImpl) writeFile(path string, params interface{}, tmpl *template.Template) error {
+func (g *subscriberGeneratorImpl) writeFile(path string, params interface{}, tmpl *template.Template) error {
 	buf := new(bytes.Buffer)
 	err := tmpl.Execute(buf, params)
 	if err != nil {
@@ -358,7 +358,7 @@ func (a *{{.Name|ToLowerCamel}}BatchConsumerAdapterImpl) BatchConsume(ctx contex
 }`)
 )
 
-type ConsumerParams struct {
+type SubscriberParams struct {
 	Package  Package
 	Message  string
 	Encoding MessageEncoding
@@ -367,7 +367,7 @@ type ConsumerParams struct {
 	Imports  []Package
 }
 
-func (p *ConsumerParams) Validate() error {
+func (p *SubscriberParams) Validate() error {
 	switch {
 	case p.Package.Path != "" && p.Message == "":
 		return fmt.Errorf("message is required")
@@ -379,15 +379,15 @@ func (p *ConsumerParams) Validate() error {
 	return nil
 }
 
-func (p *ConsumerParams) IsWithAdapter() bool {
+func (p *SubscriberParams) IsWithAdapter() bool {
 	return p.Package.Path != "" && p.Message != ""
 }
 
-func (p *ConsumerParams) IsJSON() bool {
+func (p *SubscriberParams) IsJSON() bool {
 	return p.Encoding == MessageEncodingJSON
 }
 
-func (p *ConsumerParams) IsProtobuf() bool {
+func (p *SubscriberParams) IsProtobuf() bool {
 	return p.Encoding == MessageEncodingProtobuf
 }
 

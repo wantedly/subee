@@ -18,18 +18,18 @@ func newGenerateCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		newGenerateConsumerCmd(),
+		newGenerateSubscriberCmd(),
 	)
 
 	return cmd
 }
 
-func newGenerateConsumerCmd() *cobra.Command {
-	var params generator.ConsumerParams
+func newGenerateSubscriberCmd() *cobra.Command {
+	var params generator.SubscriberParams
 	params.Encoding = generator.MessageEncodingJSON
 
 	cmd := &cobra.Command{
-		Use:  "consumer NAME",
+		Use:  "subscriber NAME",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params.Name = args[0]
@@ -38,7 +38,7 @@ func newGenerateConsumerCmd() *cobra.Command {
 				return errors.WithStack(err)
 			}
 			cfg := packages.Config{Mode: packages.LoadTypes, Dir: wd}
-			err = generator.NewConsumerGenerator(&cfg).Generate(context.Background(), &params)
+			err = generator.NewSubscriberGenerator(&cfg).Generate(context.Background(), &params)
 			return errors.WithStack(err)
 		},
 	}

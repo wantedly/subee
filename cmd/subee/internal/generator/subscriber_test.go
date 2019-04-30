@@ -14,7 +14,7 @@ import (
 	"github.com/wantedly/subee/cmd/subee/internal/generator"
 )
 
-func TestConsumerGenerator(t *testing.T) {
+func TestSubscriberGenerator(t *testing.T) {
 	dir := filepath.Join(".", "testdata", "example.com", "a", "b")
 	mods := []packagestest.Module{
 		{Name: "example.com/a/b", Files: packagestest.MustCopyFileTree(dir)},
@@ -22,23 +22,23 @@ func TestConsumerGenerator(t *testing.T) {
 
 	cases := []struct {
 		test   string
-		params generator.ConsumerParams
+		params generator.SubscriberParams
 	}{
 		{
 			test:   "simple",
-			params: generator.ConsumerParams{Name: "book"},
+			params: generator.SubscriberParams{Name: "book"},
 		},
 		{
 			test:   "with Message type",
-			params: generator.ConsumerParams{Name: "book", Encoding: generator.MessageEncodingJSON, Package: generator.Package{Path: "./c"}, Message: "Book"},
+			params: generator.SubscriberParams{Name: "book", Encoding: generator.MessageEncodingJSON, Package: generator.Package{Path: "./c"}, Message: "Book"},
 		},
 		{
 			test:   "with Message type and alias",
-			params: generator.ConsumerParams{Name: "author", Encoding: generator.MessageEncodingJSON, Package: generator.Package{Path: "./d"}, Message: "Author"},
+			params: generator.SubscriberParams{Name: "author", Encoding: generator.MessageEncodingJSON, Package: generator.Package{Path: "./d"}, Message: "Author"},
 		},
 		{
 			test:   "with Encoding protobuf",
-			params: generator.ConsumerParams{Name: "book", Encoding: generator.MessageEncodingProtobuf, Package: generator.Package{Path: "./c"}, Message: "Book"},
+			params: generator.SubscriberParams{Name: "book", Encoding: generator.MessageEncodingProtobuf, Package: generator.Package{Path: "./c"}, Message: "Book"},
 		},
 	}
 
@@ -62,7 +62,7 @@ func TestConsumerGenerator(t *testing.T) {
 							exported.Config.Dir = filepath.Join(exported.Config.Dir, "example.com", "a", "b")
 						}
 
-						gen := generator.NewConsumerGenerator(exported.Config)
+						gen := generator.NewSubscriberGenerator(exported.Config)
 						err := gen.Generate(context.Background(), &tc.params)
 						if err != nil {
 							t.Errorf("returned %+v, want nil", err)
