@@ -32,7 +32,22 @@ func newGenerateSubscriberCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "subscriber NAME",
 		Short: "Generate a new subscriber",
-		Args:  cobra.ExactArgs(1),
+		Example: `
+* Basic usage:
+
+      subee g subscriber new-book
+
+
+* Generate with a message deserializer:
+
+      subee g subscriber -p ./path/to/model -m Book new-book
+
+
+* Generate BatchConsumer:
+
+      subee g subscriber -p ./path/to/model -m Book --batch new-book
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			params.Name = args[0]
 			wd, err := os.Getwd()
@@ -45,10 +60,10 @@ func newGenerateSubscriberCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&params.Package.Path, "package", "p", "", "")
-	cmd.Flags().StringVarP(&params.Message, "message", "m", "", "")
-	cmd.Flags().VarP(&params.Encoding, "encoding", "e", "")
-	cmd.Flags().BoolVar(&params.Batch, "batch", false, "")
+	cmd.Flags().StringVarP(&params.Package.Path, "package", "p", "", "Path to package for a message type to use for deserializing messages")
+	cmd.Flags().StringVarP(&params.Message, "message", "m", "", "Message type name to use for deserializing messages")
+	cmd.Flags().VarP(&params.Encoding, "encoding", "e", "Message body encoding type, supports json or protobuf currently")
+	cmd.Flags().BoolVar(&params.Batch, "batch", false, "Generate BatchConsumer")
 
 	return cmd
 }
