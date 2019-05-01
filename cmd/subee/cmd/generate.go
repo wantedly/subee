@@ -55,7 +55,7 @@ func newGenerateSubscriberCmd() *cobra.Command {
 				return errors.WithStack(err)
 			}
 			cfg := packages.Config{Mode: packages.LoadTypes, Dir: wd}
-			err = generator.NewSubscriberGenerator(&cfg).Generate(context.Background(), &params)
+			err = generator.NewSubscriberGenerator(&cfg, cmd.OutOrStdout()).Generate(context.Background(), &params)
 			return errors.WithStack(err)
 		},
 	}

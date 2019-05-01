@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"go/types"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,14 +25,17 @@ type SubscriberGenerator interface {
 
 func NewSubscriberGenerator(
 	pkgCfg *packages.Config,
+	outW io.Writer,
 ) SubscriberGenerator {
 	return &subscriberGeneratorImpl{
 		pkgCfg: pkgCfg,
+		outW:   outW,
 	}
 }
 
 type subscriberGeneratorImpl struct {
 	pkgCfg *packages.Config
+	outW   io.Writer
 }
 
 func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *SubscriberParams) error {
@@ -109,15 +113,15 @@ func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *Subscrib
 	{
 		strong := func(arg interface{}) aurora.Value { return aurora.BrightWhite(arg).Bold() }
 		bullet := aurora.Yellow("▸")
-		fmt.Fprintln(os.Stdout)
-		fmt.Fprintln(os.Stdout, "Scaffold", aurora.BrightWhite(strcase.ToKebab(params.Name)+"-subscriber"), "successfully 🎉")
+		fmt.Fprintln(g.outW)
+		fmt.Fprintln(g.outW, "Scaffold", aurora.BrightWhite(strcase.ToKebab(params.Name)+"-subscriber"), "successfully 🎉")
 		consumer := "./pkg/consumer/" + strcase.ToSnake(params.Name) + "_consumer.go"
 		if params.Batch {
 			consumer = strings.Replace(consumer, "_consumer.go", "_batch_consumer.go", 1)
 		}
-		fmt.Fprintln(os.Stdout, bullet, "At first, you should implement", strong("createSubscriber()"), "in", strong("./cmd/"+strcase.ToKebab(params.Name)+"-subscriber/run.go"))
-		fmt.Fprintln(os.Stdout, bullet, "You can implement a messages handler in", strong(consumer))
-		fmt.Fprintln(os.Stdout, bullet, "You can run subscribers with", strong("subee start"), "command")
+		fmt.Fprintln(g.outW, bullet, "At first, you should implement", strong("createSubscriber()"), "in", strong("./cmd/"+strcase.ToKebab(params.Name)+"-subscriber/run.go"))
+		fmt.Fprintln(g.outW, bullet, "You can implement a messages handler in", strong(consumer))
+		fmt.Fprintln(g.outW, bullet, "You can run subscribers with", strong("subee start"), "command")
 	}
 
 	return nil
@@ -149,7 +153,7 @@ func (g *subscriberGeneratorImpl) writeFile(path string, params interface{}, tmp
 		return errors.WithStack(err)
 	}
 
-	fmt.Fprintf(os.Stdout, "%4s %s\n", aurora.Green("✔"), path)
+	fmt.Fprintf(g.outW, "%4s %s\n", aurora.Green("✔"), path)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package generator_test
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +63,7 @@ func TestSubscriberGenerator(t *testing.T) {
 							exported.Config.Dir = filepath.Join(exported.Config.Dir, "example.com", "a", "b")
 						}
 
-						gen := generator.NewSubscriberGenerator(exported.Config)
+						gen := generator.NewSubscriberGenerator(exported.Config, ioutil.Discard)
 						err := gen.Generate(context.Background(), &tc.params)
 						if err != nil {
 							t.Errorf("returned %+v, want nil", err)
