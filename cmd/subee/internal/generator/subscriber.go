@@ -8,9 +8,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/iancoleman/strcase"
+	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/imports"
@@ -104,6 +106,20 @@ func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *Subscrib
 		return errors.WithStack(err)
 	}
 
+	{
+		strong := func(arg interface{}) aurora.Value { return aurora.BrightWhite(arg).Bold() }
+		bullet := aurora.Yellow("▸")
+		fmt.Fprintln(os.Stdout)
+		fmt.Fprintln(os.Stdout, "Scaffold", aurora.BrightWhite(strcase.ToKebab(params.Name)+"-subscriber"), "successfully 🎉")
+		consumer := "./pkg/consumer/" + strcase.ToSnake(params.Name) + "_consumer.go"
+		if params.Batch {
+			consumer = strings.Replace(consumer, "_consumer.go", "_batch_consumer.go", 1)
+		}
+		fmt.Fprintln(os.Stdout, bullet, "At first, you should implement", strong("createSubscriber()"), "in", strong("./cmd/"+strcase.ToKebab(params.Name)+"-subscriber/run.go"))
+		fmt.Fprintln(os.Stdout, bullet, "You can implement a messages handler in", strong(consumer))
+		fmt.Fprintln(os.Stdout, bullet, "You can run subscribers with", strong("subee start"), "command")
+	}
+
 	return nil
 }
 
@@ -117,21 +133,23 @@ func (g *subscriberGeneratorImpl) writeFile(path string, params interface{}, tmp
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	path = filepath.Join(g.pkgCfg.Dir, path)
-	data, err := imports.Process(path, buf.Bytes(), nil)
+	abspath := filepath.Join(g.pkgCfg.Dir, path)
+	data, err := imports.Process(abspath, buf.Bytes(), nil)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if _, err := os.Stat(filepath.Dir(path)); err != nil {
-		err = os.MkdirAll(filepath.Dir(path), 0755)
+	if _, err := os.Stat(filepath.Dir(abspath)); err != nil {
+		err = os.MkdirAll(filepath.Dir(abspath), 0755)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 	}
-	err = ioutil.WriteFile(path, data, 0644)
+	err = ioutil.WriteFile(abspath, data, 0644)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	fmt.Fprintf(os.Stdout, "%4s %s\n", aurora.Green("✔"), path)
 	return nil
 }
 
