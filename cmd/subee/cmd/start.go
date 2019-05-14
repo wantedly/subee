@@ -17,12 +17,14 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/wantedly/subee/cmd/subee/internal/prefixer"
+	"github.com/wantedly/subee/cmd/subee/internal/safe"
 )
 
 func newStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "start [NAME]",
-		Short: "Build and start subscribers",
+		Use:           "start [NAME]",
+		Short:         "Build and start subscribers",
+		SilenceErrors: true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -50,6 +52,8 @@ func newStartCmd() *cobra.Command {
 			defer cancel()
 			defer watchSignal(ctx, cancel)()
 
+			outW, errW := safe.NewWriter(os.Stdout), safe.NewWriter(os.Stderr)
+
 			for _, pkg := range pkgs {
 				if len(pkg.Errors) > 0 || pkg.Name != "main" {
 					continue
@@ -60,10 +64,10 @@ func newStartCmd() *cobra.Command {
 					name := filepath.Base(path)
 					color := determineColor(name)
 					prefixer := prefixer.New(color(name).String)
-					cmd.Stdout = transform.NewWriter(os.Stdout, prefixer)
-					cmd.Stderr = transform.NewWriter(os.Stderr, prefixer)
-					fmt.Fprintln(cmd.Stdout, "--> starting")
-					defer fmt.Fprintln(cmd.Stdout, "<-- stopped")
+					cmd.Stdout = transform.NewWriter(outW, prefixer)
+					cmd.Stderr = transform.NewWriter(errW, prefixer)
+					fmt.Fprintln(cmd.Stdout, "▸ starting")
+					defer fmt.Fprintln(cmd.Stdout, "◃ stopped")
 					return errors.WithStack(execCommand(ctx, cmd))
 				})
 			}
@@ -114,7 +118,7 @@ func execCommand(ctx context.Context, cmd *exec.Cmd) (err error) {
 // https://github.com/wercker/stern/blob/1.10.0/stern/tail.go#L65-L81
 var (
 	colorList = []func(interface{}) aurora.Value{
-		aurora.BrightRed,
+		// aurora.BrightRed,
 		aurora.BrightGreen,
 		aurora.BrightYellow,
 		aurora.BrightBlue,
