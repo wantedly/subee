@@ -12,7 +12,7 @@ import (
 
 var (
 	appName = "subee"
-	version = "0.3.0"
+	version = "0.4.0"
 )
 
 func newVersionCmd() *cobra.Command {
