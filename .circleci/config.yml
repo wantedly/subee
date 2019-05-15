@@ -1,77 +1,116 @@
 version: 2.1
 
+orbs:
+  go-module: timakin/go-module@0.3.0
+  go-crossbuild: izumin5210/go-crossbuild@0.1.1
+  github-release: izumin5210/github-release@0.1.1
+  homebrew: izumin5210/homebrew@0.1.1
+  inline: izumin5210/inline@0.1.0
+
 executors:
   golang:
     parameters:
       version:
-        type: enum
-        enum: ['1.12.1', '1.11.6']
+        type: string
     docker:
       - image: circleci/golang:<< parameters.version >>
-
-jobs:
-  test:
-    parameters:
-      exec:
-        type: executor
-      cover:
-        default: false
-        type: boolean
-    executor: << parameters.exec >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
-      - run: go mod download
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod/cache"
-      - when:
-          condition: << parameters.cover >>
-          steps:
-            - run: go test -coverpkg ./... -coverprofile coverage.txt -covermode atomic -race -v ./...
-            - run: bash <(curl -s https://codecov.io/bash)
-      - unless:
-          condition: << parameters.cover >>
-          steps:
-            - run: go test -race -v ./...
-  e2e:
-    docker:
-      - image: circleci/golang:1.12.1
       - image: google/cloud-sdk:235.0.0
         command: [gcloud, beta, emulators, pubsub, start, '--host-port=0.0.0.0:8085']
     environment:
-      PUBSUB_EMULATOR_HOST: localhost:8085
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - go-mod-v1-{{ checksum "go.sum" }}
-      - run: go mod download
-      - save_cache:
-          key: go-mod-v1-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod/cache"
-      - run:
-          name: Wait for pubsub emulator
-          command: sleep 5
-      - run: go test -v ./_tests/cloudpubsub
+      - GO111MODULE: "on"
+      - PUBSUB_EMULATOR_HOST: localhost:8085
+
+aliases:
+  go1.11: &go-1-11
+    executor:
+      name: golang
+      version: '1.11'
+  go1.12: &go-1-12
+    executor:
+      name: golang
+      version: '1.12'
+  filter-all: &filter-all
+    filters:
+      tags:
+        only: /.*/
+  filter-release: &filter-release
+    filters:
+      branches:
+        ignore: /.*/
+      tags:
+        only: /^v\d+\.\d+\.\d+$/
 
 workflows:
   version: 2
-  test:
+  main:
     jobs:
-      - test:
-          name: 1.12.1
-          cover: true
-          exec:
-            name: golang
-            version: 1.12.1
-      - test:
-          name: 1.11.6
-          exec:
-            name: golang
-            version: 1.11.6
-      - e2e
+      - go-module/download: &setup-base
+          <<: *filter-all
+          <<: *go-1-12
+          name: 'setup-1.12'
+          persist-to-workspace: true
+          vendoring: true
+
+      - go-module/download:
+          <<: *go-1-11
+          <<: *setup-base
+          name: 'setup-1.11'
+
+      - inline/steps:
+          <<: *go-1-12
+          name: 'test-1.12'
+          steps:
+            - run: go test -coverpkg ./... -coverprofile coverage.txt -covermode atomic -race -v ./...
+            - run: bash <(curl -s https://codecov.io/bash)
+          requires:
+            - setup-1.12
+
+      - inline/steps:
+          <<: *go-1-11
+          name: 'test-1.11'
+          steps:
+            - run: go test -race -v ./...
+          requires:
+            - setup-1.11
+
+      - inline/steps: &e2e-base
+          <<: *go-1-12
+          name: 'test-e2e-1.12'
+          steps:
+            - run:
+                name: Wait for pubsub emulator
+                command: sleep 5
+            - run: go test -v ./_tests/cloudpubsub
+          requires:
+            - setup-1.12
+
+      - inline/steps:
+          <<: *go-1-11
+          <<: *e2e-base
+          name: 'test-e2e-1.11'
+          requires:
+            - setup-1.11
+
+      - go-crossbuild/build:
+          <<: *filter-all
+          <<: *go-1-12
+          app-name: subee
+          packages: ./cmd/subee
+          requires:
+            - setup-1.12
+
+      - github-release/create:
+          <<: *filter-release
+          context: tool-releasing
+          requires:
+            - test-1.12
+            - test-1.11
+            - test-e2e-1.12
+            - test-e2e-1.11
+            - go-crossbuild/build
+
+      - homebrew/update:
+          <<: *filter-release
+          context: tool-releasing
+          requires:
+            - github-release/create
