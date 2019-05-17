@@ -1,4 +1,4 @@
-# subee
+![subee](docs/subee.png)
 
 [![CircleCI](https://circleci.com/gh/wantedly/subee/tree/master.svg?style=svg)](https://circleci.com/gh/wantedly/subee/tree/master)
 [![latest](https://img.shields.io/github/release/wantedly/subee.svg)](https://github.com/wantedly/subee/releases/latest)
@@ -7,4 +7,5 @@
 [![license](https://img.shields.io/github/license/wantedly/subee.svg)](./LICENSE)
 
 ## Examples
+
 - [Your first Google Cloud Pub/sub app](_examples/your-first-cloudpubsub-app/) - start here!
