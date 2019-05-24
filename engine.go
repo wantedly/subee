@@ -81,7 +81,7 @@ func (e *Engine) watchShutdownSignal(sigstopCh <-chan struct{}, cancel context.C
 			e.Logger.Print("Finish os signal monitoring")
 			return nil
 		case sig := <-sigCh:
-			e.Logger.Printf("Received of signal: %v", sig)
+			e.Logger.Printf("Received signal: %v", sig)
 			cancel()
 		}
 	}

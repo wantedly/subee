@@ -21,7 +21,7 @@ type Publisher struct {
 func CreatePublisher(ctx context.Context) (*Publisher, error) {
 	client, err := pubsub.NewClient(ctx, "your-first-cloudpub-app")
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to create pub/sub client")
+		return nil, errors.Wrap(err, "failed to create pub/sub client")
 	}
 
 	topic := client.Topic("pub-sub-topic")

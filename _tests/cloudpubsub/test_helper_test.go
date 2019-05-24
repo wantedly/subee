@@ -15,7 +15,7 @@ type publisher struct {
 func createPublisher(ctx context.Context, projectID, topicID, subscriptionID string) (*publisher, error) {
 	client, err := pubsub.NewClient(ctx, projectID)
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to create google cloud pub/sub client")
+		return nil, errors.Wrap(err, "failed to create google cloud pub/sub client")
 	}
 
 	topic := client.Topic(topicID)
@@ -37,7 +37,7 @@ func createPublisher(ctx context.Context, projectID, topicID, subscriptionID str
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to create pub/sub subscription")
+		return nil, errors.Wrap(err, "failed to create pub/sub subscription")
 	}
 
 	return &publisher{

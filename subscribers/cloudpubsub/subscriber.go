@@ -25,12 +25,12 @@ func CreateSubscriber(ctx context.Context, projectID, subscriptionID string, opt
 
 	c, err := createPubSubClient(ctx, projectID, sub.ClientOpts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to create Google Cloud Pub/Sub client")
+		return nil, errors.Wrap(err, "failed to create Google Cloud Pub/Sub client")
 	}
 
 	pubsubSub, err := createPubSubSubscription(ctx, subscriptionID, c)
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to create Google Cloud Pub/Sub subscription")
+		return nil, errors.Wrap(err, "failed to create Google Cloud Pub/Sub subscription")
 	}
 	sub.subscription = pubsubSub
 
@@ -44,7 +44,7 @@ func createPubSubClient(ctx context.Context, projectID string, ops ...option.Cli
 
 	c, err := pubsub.NewClient(ctx, projectID, ops...)
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to create pub/sub client")
+		return nil, errors.Wrap(err, "failed to create pub/sub client")
 	}
 
 	return c, nil
@@ -55,7 +55,7 @@ func createPubSubSubscription(ctx context.Context, subscriptionID string, c *pub
 
 	ok, err := pubsubSub.Exists(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "faild to reports whether the subscription exists on the server")
+		return nil, errors.Wrap(err, "failed to report whether the subscription exists on the server")
 	}
 
 	if !ok {
