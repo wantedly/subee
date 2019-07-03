@@ -62,6 +62,9 @@ func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *Subscrib
 			}
 			break
 		}
+		if obj == nil {
+			return errors.Errorf("Message type %q not found in the given package path %q", params.Message, params.Package.Path)
+		}
 		params.Package.Path = obj.Pkg().Path()
 		params.Package.Name = obj.Pkg().Name()
 		if filepath.Base(params.Package.Path) == params.Package.Name {
