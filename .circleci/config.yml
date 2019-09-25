@@ -29,6 +29,10 @@ aliases:
     executor:
       name: golang
       version: '1.12'
+  go1.13: &go-1-13
+    executor:
+      name: golang
+      version: '1.13'
   filter-all: &filter-all
     filters:
       tags:
@@ -46,10 +50,15 @@ workflows:
     jobs:
       - go-module/download: &setup-base
           <<: *filter-all
-          <<: *go-1-12
-          name: 'setup-1.12'
+          <<: *go-1-13
+          name: 'setup-1.13'
           persist-to-workspace: true
           vendoring: true
+
+      - go-module/download:
+          <<: *go-1-12
+          <<: *setup-base
+          name: 'setup-1.12'
 
       - go-module/download:
           <<: *go-1-11
@@ -57,11 +66,19 @@ workflows:
           name: 'setup-1.11'
 
       - inline/steps:
-          <<: *go-1-12
-          name: 'test-1.12'
+          <<: *go-1-13
+          name: 'test-1.13'
           steps:
             - run: go test -coverpkg ./... -coverprofile coverage.txt -covermode atomic -race -v ./...
             - run: bash <(curl -s https://codecov.io/bash)
+          requires:
+            - setup-1.13
+
+      - inline/steps:
+          <<: *go-1-12
+          name: 'test-1.12'
+          steps:
+            - run: go test -race -v ./...
           requires:
             - setup-1.12
 
@@ -74,13 +91,20 @@ workflows:
             - setup-1.11
 
       - inline/steps: &e2e-base
-          <<: *go-1-12
-          name: 'test-e2e-1.12'
+          <<: *go-1-13
+          name: 'test-e2e-1.13'
           steps:
             - run:
                 name: Wait for pubsub emulator
                 command: sleep 5
             - run: go test -v ./_tests/cloudpubsub
+          requires:
+            - setup-1.13
+
+      - inline/steps:
+          <<: *go-1-12
+          <<: *e2e-base
+          name: 'test-e2e-1.12'
           requires:
             - setup-1.12
 
@@ -93,18 +117,20 @@ workflows:
 
       - go-crossbuild/build:
           <<: *filter-all
-          <<: *go-1-12
+          <<: *go-1-13
           app-name: subee
           packages: ./cmd/subee
           requires:
-            - setup-1.12
+            - setup-1.13
 
       - github-release/create:
           <<: *filter-release
           context: tool-releasing
           requires:
+            - test-1.13
             - test-1.12
             - test-1.11
+            - test-e2e-1.13
             - test-e2e-1.12
             - test-e2e-1.11
             - go-crossbuild/build
