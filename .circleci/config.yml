@@ -4,7 +4,7 @@ orbs:
   go-module: timakin/go-module@0.3.0
   go-crossbuild: izumin5210/go-crossbuild@0.1.1
   github-release: izumin5210/github-release@0.1.1
-  homebrew: izumin5210/homebrew@0.1.1
+  homebrew: izumin5210/homebrew@0.1.3
   inline: izumin5210/inline@0.1.0
 
 executors:
