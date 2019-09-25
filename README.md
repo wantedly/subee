@@ -6,9 +6,12 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/wantedly/subee)](https://goreportcard.com/report/github.com/wantedly/subee)
 [![license](https://img.shields.io/github/license/wantedly/subee.svg)](./LICENSE)
 
+Subee (pronounce `/ˈsʌbiː/`) is a framework for Pub/Sub subscriber worker for Go.
+
 ## Examples
 
-- [Your first Google Cloud Pub/sub app](_examples/your-first-cloudpubsub-app/) - start here!
+- [Your first app with Google Cloud Pub/Sub](_examples/your-first-cloudpubsub-app/) - start here!
+
 
 ## CLI
 
