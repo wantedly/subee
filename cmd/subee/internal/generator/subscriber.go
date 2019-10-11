@@ -181,8 +181,13 @@ func main() {
 	runTmpl = mustCreateTemplate("cmd/{{.Name}}/run.go",
 		`package main
 
+import (
+	"github.com/srvc/appctx"
+	"github.com/pkg/errors"
+)
+
 func run() error {
-	ctx := context.Background()
+	ctx := appctx.Global() // application-scope context
 
 	subscriber, err := createSubscriber(ctx)
 	if err != nil {
