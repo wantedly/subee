@@ -329,6 +329,7 @@ func (a *{{.Name|ToLowerCamel}}ConsumerAdapterImpl) Consume(ctx context.Context,
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	ctx = subee.SetRawMessage(ctx, m)
 	err = a.consumer.Consume(ctx, obj)
 	if err != nil {
 		return errors.WithStack(err)
@@ -375,6 +376,7 @@ func (a *{{.Name|ToLowerCamel}}BatchConsumerAdapterImpl) BatchConsume(ctx contex
 		}
 		objs[i] = obj
 	}
+	ctx = subee.SetRawMessages(ctx, m)
 	err = a.consumer.BatchConsume(ctx, objs)
 	if err != nil {
 		return errors.WithStack(err)

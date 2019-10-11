@@ -31,6 +31,7 @@ func (a *authorBatchConsumerAdapterImpl) BatchConsume(ctx context.Context, ms []
 		}
 		objs[i] = obj
 	}
+	ctx = subee.SetRawMessages(ctx, m)
 	err = a.consumer.BatchConsume(ctx, objs)
 	if err != nil {
 		return errors.WithStack(err)

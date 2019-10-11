@@ -27,6 +27,7 @@ func (a *authorConsumerAdapterImpl) Consume(ctx context.Context, m subee.Message
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	ctx = subee.SetRawMessage(ctx, m)
 	err = a.consumer.Consume(ctx, obj)
 	if err != nil {
 		return errors.WithStack(err)
