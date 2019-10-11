@@ -1,4 +1,4 @@
-module your-first-cloudpubsub-app
+module github.com/wantedly/subee/_tests/cloudpubsub
 
 go 1.13
 
