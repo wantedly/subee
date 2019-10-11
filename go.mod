@@ -1,5 +1,7 @@
 module github.com/wantedly/subee
 
+go 1.11
+
 require (
 	cloud.google.com/go v0.36.0
 	github.com/bradleyjkemp/cupaloy v2.3.0+incompatible
