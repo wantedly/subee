@@ -97,7 +97,7 @@ workflows:
             - run:
                 name: Wait for pubsub emulator
                 command: sleep 5
-            - run: go test -v ./_tests/cloudpubsub
+            - run: cd _tests/cloudpubsub && go test -v ./...
           requires:
             - setup-1.13
 
