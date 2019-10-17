@@ -118,8 +118,9 @@ workflows:
       - go-crossbuild/build:
           <<: *filter-all
           <<: *go-1-13
+          workspace-root: ./cmd/subee
           app-name: subee
-          packages: ./cmd/subee
+          packages: .
           requires:
             - setup-1.13
 
