@@ -42,7 +42,7 @@ aliases:
       branches:
         ignore: /.*/
       tags:
-        only: /^v\d+\.\d+\.\d+$/
+        only: /^cmd\/subee\/v\d+\.\d+\.\d+$/
 
 workflows:
   version: 2
