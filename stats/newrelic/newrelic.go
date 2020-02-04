@@ -3,13 +3,13 @@ package nrsubee
 import (
 	"context"
 
-	newrelic "github.com/newrelic/go-agent"
+	"github.com/newrelic/go-agent/v3/newrelic"
 
 	"github.com/wantedly/subee"
 )
 
 // NewStatsHandler creates a new subee.StatsHandler instance for measuring application performances with New Relic.
-func NewStatsHandler(app newrelic.Application, opts ...Option) subee.StatsHandler {
+func NewStatsHandler(app *newrelic.Application, opts ...Option) subee.StatsHandler {
 	cfg := DefaultConfig()
 	cfg.apply(opts)
 	return &statsHandler{
@@ -19,7 +19,7 @@ func NewStatsHandler(app newrelic.Application, opts ...Option) subee.StatsHandle
 }
 
 type statsHandler struct {
-	app newrelic.Application
+	app *newrelic.Application
 	cfg *Config
 }
 
@@ -31,7 +31,7 @@ type (
 func (sh *statsHandler) TagProcess(ctx context.Context, t subee.Tag) context.Context {
 	switch t.(type) {
 	case *subee.EnqueueTag:
-		txn := sh.app.StartTransaction(sh.cfg.TransactionName, nil, nil)
+		txn := sh.app.StartTransaction(sh.cfg.TransactionName)
 		ctx := newrelic.NewContext(ctx, txn)
 		seg := newrelic.StartSegment(txn, sh.cfg.QueueingSegmentName)
 		return context.WithValue(ctx, queueContextKey{}, seg)
