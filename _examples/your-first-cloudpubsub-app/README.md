@@ -42,7 +42,7 @@ $ subee g subscriber event -p ./pkg/model -m Event
         --name subee-examples \
         -e CLOUDSDK_CORE_PROJECT=subee-examples \
         -d \
-        google/cloud-sdk \
+        gcr.io/google.com/cloudsdktool/cloud-sdk \
         gcloud beta emulators pubsub start --host-port=0.0.0.0:8085
       ```
 - Set `PUBSUB_EMULATOR_HOST`
