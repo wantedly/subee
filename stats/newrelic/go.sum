@@ -1,6 +1,0 @@
-github.com/newrelic/go-agent/v3 v3.2.0 h1:VyVCJYgqNCMSa5b92dcREL7fxNIobTw6DVolTWJDJJs=
-github.com/newrelic/go-agent/v3 v3.2.0/go.mod h1:H28zDNUC0U/b7kLoY4EFOhuth10Xu/9dchozUiOseQQ=
-github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
-github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-github.com/wantedly/subee v0.5.0 h1:MXGlZYHNVxyxsolIcpwymdZHMR9OL8WlggCwu8//I0M=
-github.com/wantedly/subee v0.5.0/go.mod h1:gGKPl5ZhopDFWEAgPVZRj6+7fsY8kpQFQiFjxnRANqs=
