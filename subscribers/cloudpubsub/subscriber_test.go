@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/pubsub/pstest"
@@ -17,32 +18,50 @@ import (
 	"github.com/wantedly/subee/subscribers/cloudpubsub"
 )
 
-func TestSubscriber(t *testing.T) {
-	orDie := func(t *testing.T, err error) {
-		t.Helper()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+func orDie(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	ctx := context.Background()
+}
+
+const testTopicName = "projects/test-proj/topics/test-topic"
+
+type testEnv struct {
+	srv          *pstest.Server
+	conn         *grpc.ClientConn
+	subscription *pubsub.Subscription
+}
+
+func newTestEnv(t *testing.T, ctx context.Context) *testEnv {
+	t.Helper()
 
 	srv := pstest.NewServer()
 	conn, err := grpc.Dial(srv.Addr, grpc.WithInsecure())
 	orDie(t, err)
-	defer conn.Close()
+	t.Cleanup(func() { conn.Close() })
+
 	client, err := pubsub.NewClient(ctx, "test-proj", option.WithGRPCConn(conn))
 	orDie(t, err)
-	defer client.Close()
+	t.Cleanup(func() { client.Close() })
+
 	topic, err := client.CreateTopic(ctx, "test-topic")
 	orDie(t, err)
 	subscription, err := client.CreateSubscription(ctx, "test-sub", pubsub.SubscriptionConfig{Topic: topic})
 	orDie(t, err)
 
+	return &testEnv{srv: srv, conn: conn, subscription: subscription}
+}
+
+func TestSubscriber(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(t, ctx)
+
 	subscriber, err := cloudpubsub.CreateSubscriber(
 		ctx,
 		"test-proj",
-		subscription.ID(),
-		cloudpubsub.WithClientOptions(option.WithGRPCConn(conn)),
+		env.subscription.ID(),
+		cloudpubsub.WithClientOptions(option.WithGRPCConn(env.conn)),
 	)
 	orDie(t, err)
 
@@ -67,7 +86,7 @@ func TestSubscriber(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for _, m := range in {
-			srv.Publish("projects/test-proj/topics/test-topic", m.Data, m.Meta)
+			env.srv.Publish(testTopicName, m.Data, m.Meta)
 		}
 	}()
 
@@ -103,4 +122,57 @@ func TestSubscriber(t *testing.T) {
 
 	cancel()
 	wg.Wait()
+}
+
+// TestSubscriber_AppliesReceiveSettings guards against WithReceiveSettings being
+// accepted but never applied to the underlying pubsub.Subscription. The
+// pubsub client's flow controller enforces MaxOutstandingMessages by blocking
+// delivery of the next message until an in-flight one is acked, regardless of
+// NumGoroutines, so capping it at 1 gives a deterministic (non-flaky) way to
+// observe whether the setting reached the Subscription.
+func TestSubscriber_AppliesReceiveSettings(t *testing.T) {
+	ctx := context.Background()
+	env := newTestEnv(t, ctx)
+
+	subscriber, err := cloudpubsub.CreateSubscriber(
+		ctx,
+		"test-proj",
+		env.subscription.ID(),
+		cloudpubsub.WithClientOptions(option.WithGRPCConn(env.conn)),
+		cloudpubsub.WithReceiveSettings(pubsub.ReceiveSettings{MaxOutstandingMessages: 1}),
+	)
+	orDie(t, err)
+
+	const numMsgs = 10
+	for i := 0; i < numMsgs; i++ {
+		env.srv.Publish(testTopicName, []byte("x"), nil)
+	}
+
+	var inFlight, maxInFlight, processed int32
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- subscriber.Subscribe(ctx, func(msg subee.Message) {
+			cur := atomic.AddInt32(&inFlight, 1)
+			for {
+				m := atomic.LoadInt32(&maxInFlight)
+				if cur <= m || atomic.CompareAndSwapInt32(&maxInFlight, m, cur) {
+					break
+				}
+			}
+			time.Sleep(10 * time.Millisecond)
+			atomic.AddInt32(&inFlight, -1)
+			msg.Ack()
+			if atomic.AddInt32(&processed, 1) >= numMsgs {
+				cancel()
+			}
+		})
+	}()
+	orDie(t, <-done)
+
+	if got := atomic.LoadInt32(&maxInFlight); got > 1 {
+		t.Errorf("MaxOutstandingMessages was not applied to the subscription: observed %d concurrent in-flight messages, want at most 1", got)
+	}
 }
