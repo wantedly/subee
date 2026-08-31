@@ -32,6 +32,7 @@ func CreateSubscriber(ctx context.Context, projectID, subscriptionID string, opt
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create Google Cloud Pub/Sub subscription")
 	}
+	pubsubSub.ReceiveSettings = cfg.ReceiveSettings
 	sub.subscription = pubsubSub
 
 	return sub, nil
