@@ -48,9 +48,13 @@ func TestEngine(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	var mu sync.Mutex
 	var cur int
 	subscriber := subee_testing.NewFakeSubscriber()
 	consumer := subee.ConsumerFunc(func(ctx context.Context, msg subee.Message) error {
+		mu.Lock()
+		defer mu.Unlock()
+
 		r := &Result{
 			tc:  cases[cur],
 			msg: msg.(*subee_testing.FakeMessage),
@@ -168,9 +172,13 @@ func TestEngineWithBatchConsumer(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	var mu sync.Mutex
 	var cur int
 	subscriber := subee_testing.NewFakeSubscriber()
 	consumer := subee.BatchConsumerFunc(func(ctx context.Context, msgs []subee.Message) error {
+		mu.Lock()
+		defer mu.Unlock()
+
 		r := &Result{tc: cases[cur]}
 		for _, m := range msgs {
 			r.msgs = append(r.msgs, m.(*subee_testing.FakeMessage))
