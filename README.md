@@ -1,6 +1,6 @@
 ![subee](docs/subee.png)
 
-[![CircleCI](https://circleci.com/gh/wantedly/subee/tree/master.svg?style=svg)](https://circleci.com/gh/wantedly/subee/tree/master)
+[![test](https://github.com/wantedly/subee/actions/workflows/test.yml/badge.svg)](https://github.com/wantedly/subee/actions/workflows/test.yml)
 [![latest](https://img.shields.io/github/release/wantedly/subee.svg)](https://github.com/wantedly/subee/releases/latest)
 [![GoDoc](https://godoc.org/github.com/wantedly/subee?status.svg)](https://godoc.org/github.com/wantedly/subee)
 [![Go Report Card](https://goreportcard.com/badge/github.com/wantedly/subee)](https://goreportcard.com/report/github.com/wantedly/subee)
