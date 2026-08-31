@@ -124,12 +124,8 @@ func TestSubscriber(t *testing.T) {
 	wg.Wait()
 }
 
-// TestSubscriber_AppliesReceiveSettings guards against WithReceiveSettings being
-// accepted but never applied to the underlying pubsub.Subscription. The
-// pubsub client's flow controller enforces MaxOutstandingMessages by blocking
-// delivery of the next message until an in-flight one is acked, regardless of
-// NumGoroutines, so capping it at 1 gives a deterministic (non-flaky) way to
-// observe whether the setting reached the Subscription.
+// MaxOutstandingMessages bounds concurrent deliveries via the client's flow
+// controller regardless of NumGoroutines, making this deterministic to observe.
 func TestSubscriber_AppliesReceiveSettings(t *testing.T) {
 	ctx := context.Background()
 	env := newTestEnv(t, ctx)
