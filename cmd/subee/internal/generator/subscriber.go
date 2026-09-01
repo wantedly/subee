@@ -46,11 +46,11 @@ func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *Subscrib
 		return errors.Errorf("invalid packages.LoadMode: %v", g.pkgCfg.Mode)
 	}
 
-	// Every generated consumer/adapter file references the subee package, but not
-	// all of them do (e.g. an adapter-less consumer that only uses subee.Message).
-	// imports.Process can't reliably guess this third-party import (its resolution
-	// depends on what's already in the local module cache), so add it explicitly
-	// here and let imports.Process prune it where it ends up unused.
+	// Not every generated file references subee directly (e.g. the with-adapter
+	// consumer interface only deals with the concrete message type). imports.Process
+	// resolves missing third-party imports via the local module cache, so it can
+	// silently fail to add this one on a clean cache (e.g. CI); add it
+	// unconditionally and let imports.Process prune it where it ends up unused.
 	params.Imports = append(params.Imports, Package{Path: "github.com/wantedly/subee"})
 
 	if params.IsWithAdapter() {
