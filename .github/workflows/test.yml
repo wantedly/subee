@@ -1,0 +1,66 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: [oldstable, stable]
+        # Each directory is a separate Go module, so `go test ./...` at the repo
+        # root does not reach them. Add new modules here when they're created.
+        module:
+          - .
+          - cmd/subee
+          - middlewares/logging/zap
+          - middlewares/recovery
+          - stats/newrelic
+          - subscribers/cloudpubsub
+          - _examples/your-first-cloudpubsub-app
+    name: test (${{ matrix.module }}, ${{ matrix.go }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go }}
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - run: go test -race -v ./...
+        working-directory: ${{ matrix.module }}
+
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: [oldstable, stable]
+    name: e2e (${{ matrix.go }})
+    env:
+      PUBSUB_EMULATOR_HOST: localhost:8085
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go }}
+          cache-dependency-path: _tests/cloudpubsub/go.sum
+      # `services:` cannot override the image's command, and this image does
+      # not start the emulator on its own.
+      - name: Start Pub/Sub emulator
+        run: |
+          cid=$(docker run -d -p 8085:8085 \
+            gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators \
+            gcloud beta emulators pubsub start --host-port=0.0.0.0:8085)
+          echo "PUBSUB_EMULATOR_CID=$cid" >> "$GITHUB_ENV"
+          timeout 60 bash -c 'until curl -sf http://localhost:8085 >/dev/null; do sleep 1; done'
+      - run: go test -race -v ./...
+        working-directory: _tests/cloudpubsub
+      - name: Show Pub/Sub emulator logs
+        if: failure()
+        run: docker logs "$PUBSUB_EMULATOR_CID"

@@ -46,6 +46,13 @@ func (g *subscriberGeneratorImpl) Generate(ctx context.Context, params *Subscrib
 		return errors.Errorf("invalid packages.LoadMode: %v", g.pkgCfg.Mode)
 	}
 
+	// Not every generated file references subee directly (e.g. the with-adapter
+	// consumer interface only deals with the concrete message type). imports.Process
+	// resolves missing third-party imports via the local module cache, so it can
+	// silently fail to add this one on a clean cache (e.g. CI); add it
+	// unconditionally and let imports.Process prune it where it ends up unused.
+	params.Imports = append(params.Imports, Package{Path: "github.com/wantedly/subee"})
+
 	if params.IsWithAdapter() {
 		pkgs, err := packages.Load(g.pkgCfg, params.Package.Path)
 		if err != nil {
@@ -184,6 +191,7 @@ func main() {
 import (
 	"github.com/srvc/appctx"
 	"github.com/pkg/errors"
+	"github.com/wantedly/subee"
 )
 
 func run() error {
